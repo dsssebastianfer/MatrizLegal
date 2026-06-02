@@ -28,9 +28,8 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = db.storage.from('documentos').getPublicUrl(storagePath)
-  try { await db.rpc('set_app_user_email', { email }) } catch {}
   const { error } = await db.from('laws')
-    .update({ documento_nombre: file.name, documento_url: publicUrl }).eq('id', id)
+    .update({ documento_nombre: file.name, documento_url: publicUrl, updated_by: email }).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ url: publicUrl, nombre: file.name })
 }
@@ -46,7 +45,6 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const storagePath = new URL(docUrl).pathname.split('/documentos/')[1]
     if (storagePath) await db.storage.from('documentos').remove([storagePath])
   }
-  try { await db.rpc('set_app_user_email', { email }) } catch {}
-  await db.from('laws').update({ documento_nombre: null, documento_url: null }).eq('id', id)
+  await db.from('laws').update({ documento_nombre: null, documento_url: null, updated_by: email }).eq('id', id)
   return NextResponse.json({ ok: true })
 }
