@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createDataClient as createClient } from '@/lib/supabase/data'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import LawForm from '@/components/LawForm'
@@ -8,7 +8,7 @@ type Params = { params: Promise<{ id: string }> }
 
 export default async function EditarLeyPage({ params }: Params) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createClient()
   const { data, error } = await supabase.from('laws').select('*').eq('id', id).single()
   if (error || !data) notFound()
 

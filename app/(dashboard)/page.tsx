@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createDataClient as createClient } from '@/lib/supabase/data'
 import Link from 'next/link'
 import LawsFilter from '@/components/LawsFilter'
 import ExpandableCell from '@/components/ExpandableCell'
@@ -14,7 +14,7 @@ interface PageProps {
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const params = await searchParams
-  const supabase = await createClient()
+  const supabase = createClient()
 
   let query = supabase.from('laws').select('*').order('item', { ascending: true, nullsFirst: false })
 

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createDataClient as createClient } from '@/lib/supabase/data'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ReviewStatusBadge from '@/components/ReviewStatusBadge'
@@ -11,7 +11,7 @@ type Params = { params: Promise<{ id: string }> }
 
 export default async function LeyDetailPage({ params }: Params) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createClient()
 
   const [lawRes, articlesRes, auditRes] = await Promise.all([
     supabase.from('laws').select('*').eq('id', id).single(),

@@ -1,11 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { createDataClient as createClient } from '@/lib/supabase/data'
 import { NextRequest, NextResponse } from 'next/server'
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createClient()
 
   const { data, error } = await supabase
     .from('audit_log')

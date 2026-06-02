@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createDataClient as createClient } from '@/lib/supabase/data'
 import type { AuditLog, Law } from '@/lib/types'
 import { groupAuditItems } from '@/lib/audit-utils'
 import type { GroupedEvent } from '@/lib/audit-utils'
@@ -11,7 +11,7 @@ interface SearchParams { usuario?: string; ley?: string; desde?: string; hasta?:
 
 export default async function HistorialPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams
-  const supabase = await createClient()
+  const supabase = createClient()
 
   // Si hay filtro por ley, primero resolvemos los IDs
   let filteredLawIds: string[] | null = null
