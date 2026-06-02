@@ -1,5 +1,14 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Base de datos local
+/local.db
+/local.db-shm
+/local.db-wal
+
+# Documentos subidos en modo local
+/public/documentos/
+
+
 # dependencies
 /node_modules
 /.pnp
