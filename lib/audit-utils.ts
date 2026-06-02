@@ -15,6 +15,7 @@ export const CAMPO_LABELS: Record<string, string> = {
 }
 
 export const DESC_STYLES: Record<string, string> = {
+  'Verificación de vigencia': 'bg-emerald-100 text-emerald-700',
   'Se realizó revisión':   'bg-blue-100 text-blue-700',
   'Se adjuntó documento':  'bg-teal-100 text-teal-700',
   'Se quitó documento':    'bg-orange-100 text-orange-700',
@@ -41,6 +42,9 @@ export function getDescripcion(items: AuditLog[]): string {
   if (accion === 'INSERT') return tabla === 'laws' ? 'Se agregó ley' : 'Se agregó artículo'
   if (accion === 'DELETE') return tabla === 'laws' ? 'Se eliminó ley' : 'Se quitó artículo'
   const campos = items.map(i => i.campo)
+  // Vigencia tiene prioridad sobre revisión general
+  if (campos.includes('vigencia_revisada_en') || campos.includes('vigencia_nota') || campos.includes('vigencia_estado'))
+    return 'Verificación de vigencia'
   if (campos.includes('fecha_ultima_evaluacion')) return 'Se realizó revisión'
   if (campos.includes('documento_url')) {
     const d = items.find(i => i.campo === 'documento_url')
