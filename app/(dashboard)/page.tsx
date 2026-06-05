@@ -104,7 +104,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <colgroup>
             <col className="w-8" />
             <col className="w-[12%]" />
-            <col className="w-[23%]" />
+            <col className="w-[21%]" />
             <col className="w-[9%]" />
             <col className="w-[10%]" />
             <col className="w-[6%]" />
@@ -112,7 +112,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             <col className="w-[8%]" />
             <col className="w-[8%]" />
             <col className="w-8" />
-            <col className="w-10" />
+            <col className="w-20" />
           </colgroup>
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
