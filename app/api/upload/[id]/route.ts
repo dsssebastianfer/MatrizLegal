@@ -25,23 +25,15 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = db.storage.from('documentos').getPublicUrl(storagePath)
-  const { error } = await db.from('laws')
-    .update({ documento_nombre: file.name, documento_url: publicUrl, updated_by: email }).eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ url: publicUrl, nombre: file.name })
-}
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const { id } = await params
-  const email = await getSessionEmail()
-  if (!email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  const db = createDataClient()
-  const { data: law } = await db.from('laws').select('documento_url').eq('id', id).single()
-  const docUrl = (law as { documento_url: string | null } | null)?.documento_url
-  if (docUrl) {
-    const storagePath = new URL(docUrl).pathname.split('/documentos/')[1]
-    if (storagePath) await db.storage.from('documentos').remove([storagePath])
-  }
-  await db.from('laws').update({ documento_nombre: null, documento_url: null, updated_by: email }).eq('id', id)
-  return NextResponse.json({ ok: true })
+  const { data, error } = await db.from('documents').insert({
+    law_id: id,
+    nombre: file.name,
+    url: publicUrl,
+    storage_path: storagePath,
+    uploaded_by: email,
+  }).select().single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json(data)
 }

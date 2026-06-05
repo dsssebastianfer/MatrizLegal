@@ -6,7 +6,7 @@ import LawDetailActions from '@/components/LawDetailActions'
 import ArticlesTable from '@/components/ArticlesTable'
 import DocumentSection from '@/components/DocumentSection'
 import AuditPanel from '@/components/AuditPanel'
-import type { Law, Article, AuditLog } from '@/lib/types'
+import type { Law, Article, AuditLog, LawDocument } from '@/lib/types'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -14,14 +14,16 @@ export default async function LeyDetailPage({ params }: Params) {
   const { id } = await params
   const supabase = createClient()
 
-  const [lawRes, articlesRes] = await Promise.all([
+  const [lawRes, articlesRes, docsRes] = await Promise.all([
     supabase.from('laws').select('*').eq('id', id).single(),
     supabase.from('articles').select('*').eq('law_id', id).order('created_at'),
+    supabase.from('documents').select('*').eq('law_id', id).order('created_at'),
   ])
 
   if (lawRes.error || !lawRes.data) notFound()
   const law = lawRes.data as unknown as Law
   const articles = (articlesRes.data ?? []) as unknown as Article[]
+  const documents = (docsRes.data ?? []) as unknown as LawDocument[]
 
   const articleIds = articles.map(a => a.id)
   const auditIds = [id, ...articleIds]
@@ -103,7 +105,7 @@ export default async function LeyDetailPage({ params }: Params) {
         </div>
       </div>
 
-      <DocumentSection lawId={id} documentoNombre={law.documento_nombre} documentoUrl={law.documento_url} />
+      <DocumentSection lawId={id} documents={documents} />
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">

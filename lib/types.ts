@@ -55,6 +55,16 @@ export interface AuditLog {
   created_at: string
 }
 
+export interface LawDocument {
+  id: string
+  law_id: string
+  nombre: string
+  url: string
+  storage_path: string
+  uploaded_by: string | null
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {

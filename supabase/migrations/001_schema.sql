@@ -68,9 +68,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  law_id UUID NOT NULL REFERENCES laws(id) ON DELETE CASCADE,
+  nombre TEXT NOT NULL,
+  url TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  uploaded_by TEXT,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- ---- Índices ----
 
 CREATE INDEX IF NOT EXISTS idx_articles_law_id ON articles(law_id);
+CREATE INDEX IF NOT EXISTS idx_documents_law_id ON documents(law_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_registro_id ON audit_log(registro_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
 
