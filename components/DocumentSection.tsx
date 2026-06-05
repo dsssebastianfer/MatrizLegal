@@ -122,7 +122,7 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <a href={doc.url} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline">
+                  className="text-sm font-medium text-blue-600 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-50 transition-colors">
                   Abrir
                 </a>
                 <button onClick={() => setDeleteTarget(doc.id)}
