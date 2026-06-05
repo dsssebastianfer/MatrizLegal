@@ -1,5 +1,5 @@
 import { createDataClient as createClient } from '@/lib/supabase/data'
-import type { AuditLog, Law } from '@/lib/types'
+import type { AuditLog } from '@/lib/types'
 import { groupAuditItems } from '@/lib/audit-utils'
 import type { GroupedEvent } from '@/lib/audit-utils'
 import HistorialTable from '@/components/HistorialTable'
@@ -13,7 +13,7 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
   const params = await searchParams
   const supabase = createClient()
 
-  // Si hay filtro por ley, primero resolvemos los IDs
+  // Si hay filtro por ley, resolver IDs coincidentes
   let filteredLawIds: string[] | null = null
   if (params.ley) {
     const { data: matchingLaws } = await supabase
@@ -31,19 +31,30 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
   if (params.usuario) query = query.ilike('usuario_email', `%${params.usuario}%`)
   if (params.desde)   query = query.gte('created_at', params.desde)
   if (params.hasta)   query = query.lte('created_at', params.hasta + 'T23:59:59')
-  if (filteredLawIds) query = query.in('registro_id', filteredLawIds)
+  if (filteredLawIds) {
+    const ids = filteredLawIds.join(',')
+    query = query.or(`registro_id.in.(${ids}),law_id.in.(${ids})`)
+  }
 
   const { data: rawItems = [] } = await query
   const items = (rawItems ?? []) as unknown as AuditLog[]
 
-  // Resolver leyes de laws y artículos en paralelo
-  const allIds = [...new Set(items.map(i => i.registro_id))]
-  const [{ data: rawLaws = [] }, { data: rawArticles = [] }] = await Promise.all([
-    allIds.length > 0
-      ? supabase.from('laws').select('id, item, codigo').in('id', allIds)
+  // IDs de leyes directos (eventos de laws) + law_ids de artículos nuevos (con columna law_id)
+  const directLawIds = [...new Set([
+    ...items.filter(i => i.tabla === 'laws').map(i => i.registro_id),
+    ...items.filter(i => i.tabla === 'articles' && i.law_id).map(i => i.law_id!),
+  ])]
+  // Artículos sin law_id (registros viejos): necesitan lookup via tabla articles
+  const articleIdsWithoutLawId = items
+    .filter(i => i.tabla === 'articles' && !i.law_id)
+    .map(i => i.registro_id)
+
+  const [{ data: rawLaws = [] }, { data: rawFallbackArticles = [] }] = await Promise.all([
+    directLawIds.length > 0
+      ? supabase.from('laws').select('id, item, codigo').in('id', directLawIds)
       : Promise.resolve({ data: [] }),
-    allIds.length > 0
-      ? supabase.from('articles').select('id, law_id').in('id', allIds)
+    articleIdsWithoutLawId.length > 0
+      ? supabase.from('articles').select('id, law_id').in('id', articleIdsWithoutLawId)
       : Promise.resolve({ data: [] }),
   ])
 
@@ -52,27 +63,26 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
     lawMap[l.id] = { item: l.item, codigo: l.codigo }
   }
 
-  const articleLawIds = [...new Set(
-    (rawArticles ?? [] as { id: string; law_id: string }[])
-      .filter((a): a is { id: string; law_id: string } => !!a.law_id)
-      .map(a => a.law_id)
-  )]
-  if (articleLawIds.length > 0) {
-    const { data: rawArtLaws = [] } = await supabase
-      .from('laws').select('id, item, codigo').in('id', articleLawIds)
-    const artLawMap: Record<string, LawRef> = {}
-    for (const l of (rawArtLaws ?? []) as { id: string; item: number | null; codigo: string }[]) {
-      artLawMap[l.id] = { item: l.item, codigo: l.codigo }
-    }
-    for (const a of (rawArticles ?? []) as { id: string; law_id: string }[]) {
-      if (artLawMap[a.law_id]) lawMap[a.id] = artLawMap[a.law_id]
+  // Fallback para registros viejos sin law_id: buscar la ley del artículo
+  const fallbackArticles = (rawFallbackArticles ?? []) as { id: string; law_id: string }[]
+  if (fallbackArticles.length > 0) {
+    const fallbackLawIds = [...new Set(fallbackArticles.map(a => a.law_id).filter(Boolean))]
+    if (fallbackLawIds.length > 0) {
+      const { data: fallbackLaws } = await supabase
+        .from('laws').select('id, item, codigo').in('id', fallbackLawIds)
+      for (const l of (fallbackLaws ?? []) as { id: string; item: number | null; codigo: string }[]) {
+        lawMap[l.id] = { item: l.item, codigo: l.codigo }
+      }
+      for (const a of fallbackArticles) {
+        if (a.law_id && lawMap[a.law_id]) lawMap[a.id] = lawMap[a.law_id]
+      }
     }
   }
 
-  const grouped: GroupedEventWithLaw[] = groupAuditItems(items).map(e => ({
-    ...e,
-    law: lawMap[e.registro_id] ?? null,
-  }))
+  const grouped: GroupedEventWithLaw[] = groupAuditItems(items).map(e => {
+    const resolvedId = e.tabla === 'laws' ? e.registro_id : (e.law_id ?? e.registro_id)
+    return { ...e, law: lawMap[resolvedId] ?? null }
+  })
 
   return (
     <div className="space-y-6">

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tabla TEXT NOT NULL,
   registro_id UUID NOT NULL,
+  law_id UUID,
   accion TEXT NOT NULL,
   campo TEXT,
   valor_anterior TEXT,
@@ -102,17 +103,14 @@ DECLARE
   new_val TEXT;
   user_email TEXT;
 BEGIN
-  BEGIN
-    user_email := current_setting('app.user_email', true);
-  EXCEPTION WHEN OTHERS THEN
-    user_email := NULL;
-  END;
-
   IF TG_OP = 'DELETE' THEN
+    user_email := current_setting('app.user_email', true);
     INSERT INTO audit_log(tabla, registro_id, accion, usuario_email)
     VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', user_email);
     RETURN OLD;
   END IF;
+
+  user_email := COALESCE(NULLIF(NEW.updated_by, ''), current_setting('app.user_email', true));
 
   IF TG_OP = 'INSERT' THEN
     INSERT INTO audit_log(tabla, registro_id, accion, usuario_email)
@@ -148,21 +146,18 @@ DECLARE
   new_val TEXT;
   user_email TEXT;
 BEGIN
-  BEGIN
-    user_email := current_setting('app.user_email', true);
-  EXCEPTION WHEN OTHERS THEN
-    user_email := NULL;
-  END;
-
   IF TG_OP = 'DELETE' THEN
-    INSERT INTO audit_log(tabla, registro_id, accion, usuario_email)
-    VALUES ('articles', OLD.id, 'DELETE', user_email);
+    user_email := current_setting('app.user_email', true);
+    INSERT INTO audit_log(tabla, registro_id, law_id, accion, usuario_email)
+    VALUES ('articles', OLD.id, OLD.law_id, 'DELETE', user_email);
     RETURN OLD;
   END IF;
 
+  user_email := COALESCE(NULLIF(NEW.updated_by, ''), current_setting('app.user_email', true));
+
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO audit_log(tabla, registro_id, accion, usuario_email)
-    VALUES ('articles', NEW.id, 'INSERT', user_email);
+    INSERT INTO audit_log(tabla, registro_id, law_id, accion, usuario_email)
+    VALUES ('articles', NEW.id, NEW.law_id, 'INSERT', user_email);
     RETURN NEW;
   END IF;
 
@@ -173,8 +168,8 @@ BEGIN
     EXECUTE format('SELECT ($1).%I::TEXT, ($2).%I::TEXT', col, col)
       INTO old_val, new_val USING OLD, NEW;
     IF old_val IS DISTINCT FROM new_val THEN
-      INSERT INTO audit_log(tabla, registro_id, accion, campo, valor_anterior, valor_nuevo, usuario_email)
-      VALUES ('articles', NEW.id, 'UPDATE', col, old_val, new_val, user_email);
+      INSERT INTO audit_log(tabla, registro_id, law_id, accion, campo, valor_anterior, valor_nuevo, usuario_email)
+      VALUES ('articles', NEW.id, NEW.law_id, 'UPDATE', col, old_val, new_val, user_email);
     END IF;
   END LOOP;
 

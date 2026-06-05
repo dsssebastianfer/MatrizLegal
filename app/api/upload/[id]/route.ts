@@ -21,10 +21,8 @@ export async function POST(request: NextRequest, { params }: Params) {
   const db = createDataClient()
   const ext = file.name.split('.').pop()
   const storagePath = `leyes/${id}/${Date.now()}.${ext}`
-  const bytes = await file.arrayBuffer()
-
   const { error: uploadError } = await db.storage
-    .from('documentos').upload(storagePath, bytes, { contentType: file.type, upsert: true })
+    .from('documentos').upload(storagePath, file, { contentType: file.type, upsert: true })
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = db.storage.from('documentos').getPublicUrl(storagePath)

@@ -46,6 +46,7 @@ export interface AuditLog {
   id: string
   tabla: string
   registro_id: string
+  law_id: string | null
   accion: 'INSERT' | 'UPDATE' | 'DELETE'
   campo: string | null
   valor_anterior: string | null

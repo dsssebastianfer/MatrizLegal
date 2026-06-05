@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Article } from '@/lib/types'
 
 interface Props {
@@ -23,11 +24,34 @@ function CheckCell({ checked, onChange }: { checked: boolean; onChange: (v: bool
   )
 }
 
+function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <h3 className="font-semibold text-slate-800 mb-2">Eliminar artículo</h3>
+        <p className="text-sm text-slate-500 mb-6">¿Estás seguro que deseas eliminar este artículo? Esta acción no se puede deshacer.</p>
+        <div className="flex gap-3 justify-end">
+          <button onClick={onCancel}
+            className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ArticlesTable({ articles: initial, lawId }: Props) {
+  const router = useRouter()
   const [articles, setArticles] = useState<Article[]>(initial)
   const [saving, setSaving] = useState<string | null>(null)
   const [addingNew, setAddingNew] = useState(false)
   const [newRow, setNewRow] = useState<Partial<EditableFields>>({})
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   async function updateArticle(id: string, field: keyof EditableFields, value: string | boolean) {
     setSaving(id)
@@ -39,14 +63,16 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
     if (res.ok) {
       const updated = await res.json()
       setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a))
+      router.refresh()
     }
     setSaving(null)
   }
 
   async function deleteArticle(id: string) {
-    if (!confirm('¿Eliminar este artículo?')) return
     await fetch(`/api/articulos/${id}`, { method: 'DELETE' })
     setArticles(prev => prev.filter(a => a.id !== id))
+    setDeleteTarget(null)
+    router.refresh()
   }
 
   async function saveNewRow() {
@@ -60,11 +86,19 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
       setArticles(prev => [...prev, created])
       setNewRow({})
       setAddingNew(false)
+      router.refresh()
     }
   }
 
   return (
     <div>
+      {deleteTarget && (
+        <DeleteConfirmModal
+          onConfirm={() => deleteArticle(deleteTarget)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -84,23 +118,13 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
             {articles.map(article => (
               <tr key={article.id} className={`hover:bg-slate-50 ${saving === article.id ? 'opacity-60' : ''}`}>
                 <td className="px-4 py-2">
-                  <EditableCell
-                    value={article.articulo ?? ''}
-                    onSave={v => updateArticle(article.id, 'articulo', v)}
-                  />
+                  <EditableCell value={article.articulo ?? ''} onSave={v => updateArticle(article.id, 'articulo', v)} />
                 </td>
                 <td className="px-4 py-2">
-                  <EditableCell
-                    value={article.ambito_aplicacion ?? ''}
-                    onSave={v => updateArticle(article.id, 'ambito_aplicacion', v)}
-                    multiline
-                  />
+                  <EditableCell value={article.ambito_aplicacion ?? ''} onSave={v => updateArticle(article.id, 'ambito_aplicacion', v)} multiline />
                 </td>
                 <td className="px-4 py-2">
-                  <EditableCell
-                    value={article.frecuencia_evaluacion ?? ''}
-                    onSave={v => updateArticle(article.id, 'frecuencia_evaluacion', v)}
-                  />
+                  <EditableCell value={article.frecuencia_evaluacion ?? ''} onSave={v => updateArticle(article.id, 'frecuencia_evaluacion', v)} />
                 </td>
                 <td className="px-4 py-2 text-center">
                   <div className="flex justify-center">
@@ -123,17 +147,13 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
                   </div>
                 </td>
                 <td className="px-4 py-2">
-                  <EditableCell
-                    value={article.registro_evidencia ?? ''}
-                    onSave={v => updateArticle(article.id, 'registro_evidencia', v)}
-                    multiline
-                  />
+                  <EditableCell value={article.registro_evidencia ?? ''} onSave={v => updateArticle(article.id, 'registro_evidencia', v)} multiline />
                 </td>
                 <td className="px-4 py-2">
                   <button
-                    onClick={() => deleteArticle(article.id)}
+                    onClick={() => setDeleteTarget(article.id)}
                     className="text-slate-300 hover:text-red-500 transition-colors text-xs"
-                    title="Eliminar"
+                    title="Eliminar artículo"
                   >
                     ✕
                   </button>
@@ -141,7 +161,6 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
               </tr>
             ))}
 
-            {/* Fila nueva */}
             {addingNew && (
               <tr className="bg-blue-50">
                 <td className="px-4 py-2">
@@ -165,9 +184,15 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
                     value={newRow.registro_evidencia ?? ''} onChange={e => setNewRow(p => ({ ...p, registro_evidencia: e.target.value }))} />
                 </td>
                 <td className="px-4 py-2">
-                  <div className="flex flex-col gap-1">
-                    <button onClick={saveNewRow} className="text-green-600 hover:text-green-800 text-xs">✓</button>
-                    <button onClick={() => { setAddingNew(false); setNewRow({}) }} className="text-slate-400 hover:text-red-500 text-xs">✕</button>
+                  <div className="flex flex-col gap-1.5">
+                    <button onClick={saveNewRow}
+                      className="px-2 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors">
+                      Aceptar
+                    </button>
+                    <button onClick={() => { setAddingNew(false); setNewRow({}) }}
+                      className="px-2 py-1.5 text-xs text-slate-500 border border-slate-300 rounded-md hover:bg-slate-50 transition-colors">
+                      Cancelar
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -178,10 +203,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
 
       {!addingNew && (
         <div className="px-6 py-3 border-t border-slate-100">
-          <button
-            onClick={() => setAddingNew(true)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
+          <button onClick={() => setAddingNew(true)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
             + Agregar artículo
           </button>
         </div>
@@ -190,11 +212,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   )
 }
 
-function EditableCell({ value, onSave, multiline }: {
-  value: string
-  onSave: (v: string) => void
-  multiline?: boolean
-}) {
+function EditableCell({ value, onSave, multiline }: { value: string; onSave: (v: string) => void; multiline?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [current, setCurrent] = useState(value)
 
@@ -205,11 +223,9 @@ function EditableCell({ value, onSave, multiline }: {
 
   if (!editing) {
     return (
-      <div
-        onClick={() => setEditing(true)}
+      <div onClick={() => setEditing(true)}
         className="cursor-text min-h-[1.5rem] text-slate-700 hover:bg-blue-50 rounded px-1 py-0.5 text-xs"
-        title="Click para editar"
-      >
+        title="Click para editar">
         {value || <span className="text-slate-300 italic">—</span>}
       </div>
     )
@@ -217,24 +233,15 @@ function EditableCell({ value, onSave, multiline }: {
 
   if (multiline) {
     return (
-      <textarea
-        autoFocus
+      <textarea autoFocus rows={3}
         className="w-full border border-blue-400 rounded px-2 py-1 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
-        value={current}
-        onChange={e => setCurrent(e.target.value)}
-        onBlur={handleBlur}
-        rows={3}
-      />
+        value={current} onChange={e => setCurrent(e.target.value)} onBlur={handleBlur} />
     )
   }
 
   return (
-    <input
-      autoFocus
+    <input autoFocus
       className="w-full border border-blue-400 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-      value={current}
-      onChange={e => setCurrent(e.target.value)}
-      onBlur={handleBlur}
-    />
+      value={current} onChange={e => setCurrent(e.target.value)} onBlur={handleBlur} />
   )
 }

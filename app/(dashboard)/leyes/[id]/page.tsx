@@ -2,6 +2,7 @@ import { createDataClient as createClient } from '@/lib/supabase/data'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ReviewStatusBadge from '@/components/ReviewStatusBadge'
+import LawDetailActions from '@/components/LawDetailActions'
 import ArticlesTable from '@/components/ArticlesTable'
 import DocumentSection from '@/components/DocumentSection'
 import AuditPanel from '@/components/AuditPanel'
@@ -13,16 +14,21 @@ export default async function LeyDetailPage({ params }: Params) {
   const { id } = await params
   const supabase = createClient()
 
-  const [lawRes, articlesRes, auditRes] = await Promise.all([
+  const [lawRes, articlesRes] = await Promise.all([
     supabase.from('laws').select('*').eq('id', id).single(),
     supabase.from('articles').select('*').eq('law_id', id).order('created_at'),
-    supabase.from('audit_log').select('*').eq('registro_id', id).order('created_at', { ascending: false }).limit(50),
   ])
 
   if (lawRes.error || !lawRes.data) notFound()
   const law = lawRes.data as unknown as Law
   const articles = (articlesRes.data ?? []) as unknown as Article[]
-  const auditItems = (auditRes.data ?? []) as unknown as AuditLog[]
+
+  const articleIds = articles.map(a => a.id)
+  const auditIds = [id, ...articleIds]
+  const { data: auditData } = await supabase
+    .from('audit_log').select('*').in('registro_id', auditIds)
+    .order('created_at', { ascending: false }).limit(50)
+  const auditItems = (auditData ?? []) as unknown as AuditLog[]
 
   return (
     <div className="space-y-6">
@@ -66,12 +72,23 @@ export default async function LeyDetailPage({ params }: Params) {
             {law.aplicacion && (
               <div className="mt-3"><InfoField label="Aplicación" value={law.aplicacion} /></div>
             )}
-            {law.vigencia_nota && (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
-                <span className="text-green-500 shrink-0 mt-0.5">✓</span>
-                <p className="text-sm text-green-800">{law.vigencia_nota}</p>
-              </div>
-            )}
+            <div className="mt-4 flex items-center gap-3">
+              <LawDetailActions
+                id={law.id} codigo={law.codigo}
+                periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
+                estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
+                vigencia={law.vigencia} vigencia_nota={law.vigencia_nota ?? null}
+                vigencia_estado={law.vigencia_estado ?? null}
+                vigencia_revisada_en={law.vigencia_revisada_en ?? null}
+                vigencia_modificada_en={law.vigencia_modificada_en ?? null}
+              />
+              {law.vigencia_nota && (
+                <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                  <span className="text-green-500 text-sm">✓</span>
+                  <p className="text-sm text-green-800">{law.vigencia_nota}</p>
+                </div>
+              )}
+            </div>
             {law.observaciones && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs text-amber-700 font-medium uppercase tracking-wide mb-1">Observaciones</p>

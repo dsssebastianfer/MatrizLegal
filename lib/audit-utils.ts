@@ -33,6 +33,7 @@ export interface GroupedEvent {
   timestamp: string
   usuario_email: string | null
   registro_id: string
+  law_id: string | null
   tabla: string
   descripcion: string
   changes: AuditLog[]
@@ -76,6 +77,7 @@ export function groupAuditItems(items: AuditLog[]): GroupedEvent[] {
       timestamp: grp[0].created_at,
       usuario_email: grp[0].usuario_email,
       registro_id: grp[0].registro_id,
+      law_id: grp[0].law_id ?? null,
       tabla: grp[0].tabla,
       descripcion: getDescripcion(grp),
       changes: grp,

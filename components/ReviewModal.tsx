@@ -47,6 +47,7 @@ export default function ReviewModal({ law, onClose }: Props) {
       ? law.estado_cumplimiento! : 'en_cumplimiento')
   )
   const [observaciones, setObservaciones] = useState(law.observaciones ?? '')
+  const [implementacionDirty, setImplementacionDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
   const dias = diasDesdeEval(law.fecha_ultima_evaluacion)
@@ -94,18 +95,21 @@ export default function ReviewModal({ law, onClose }: Props) {
     setSaving(true)
     setError('')
     try {
+      const body: Record<string, unknown> = {
+        vigencia_nota: vigenciaNota || null,
+        vigencia_estado: vigenciaEstado,
+        vigencia_revisada_en: vigenciaRevisadaEn || null,
+        vigencia_modificada_en: vigenciaModificadaEn || null,
+      }
+      if (implementacionDirty) {
+        body.estado_cumplimiento = estado
+        body.observaciones = observaciones || null
+        body.fecha_ultima_evaluacion = today
+      }
       const res = await fetch(`/api/leyes/${law.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          estado_cumplimiento: estado,
-          observaciones: observaciones || null,
-          fecha_ultima_evaluacion: today,
-          vigencia_nota: vigenciaNota || null,
-          vigencia_estado: vigenciaEstado,
-          vigencia_revisada_en: vigenciaRevisadaEn || null,
-          vigencia_modificada_en: vigenciaModificadaEn || null,
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
@@ -236,9 +240,9 @@ export default function ReviewModal({ law, onClose }: Props) {
               <label className="block text-sm font-medium text-slate-700 mb-2">Implementación</label>
               <div className="grid grid-cols-3 gap-2">
                 {ESTADOS.map(e => (
-                  <button key={e.value} onClick={() => setEstado(e.value)}
+                  <button key={e.value} onClick={() => { setEstado(e.value); setImplementacionDirty(true) }}
                     className={`px-3 py-2.5 rounded-lg text-sm border-2 text-center font-medium transition-colors ${
-                      estado === e.value ? e.color : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      implementacionDirty && estado === e.value ? e.color : 'border-slate-200 text-slate-500 hover:border-slate-300'
                     }`}>
                     {e.label}
                   </button>
@@ -248,7 +252,7 @@ export default function ReviewModal({ law, onClose }: Props) {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-              <textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows={3}
+              <textarea value={observaciones} onChange={e => { setObservaciones(e.target.value); setImplementacionDirty(true) }} rows={3}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Describe el estado actual de implementación..." />
             </div>
