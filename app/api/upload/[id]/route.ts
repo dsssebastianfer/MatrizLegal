@@ -13,16 +13,15 @@ export async function POST(request: NextRequest, { params }: Params) {
   const file = formData.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'Sin archivo' }, { status: 400 })
 
-  const allowedTypes = ['application/pdf', 'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-  if (!allowedTypes.includes(file.type))
-    return NextResponse.json({ error: 'Solo se permiten PDF y Word' }, { status: 400 })
+  const ext = (file.name.split('.').pop() ?? '').toLowerCase()
+  if (!['pdf', 'doc', 'docx'].includes(ext))
+    return NextResponse.json({ error: 'Solo se permiten PDF y Word (.pdf, .doc, .docx)' }, { status: 400 })
 
   const db = createDataClient()
-  const ext = file.name.split('.').pop()
   const storagePath = `leyes/${id}/${Date.now()}.${ext}`
+  const bytes = await file.arrayBuffer()
   const { error: uploadError } = await db.storage
-    .from('documentos').upload(storagePath, file, { contentType: file.type, upsert: true })
+    .from('documentos').upload(storagePath, bytes, { contentType: file.type || 'application/octet-stream', upsert: true })
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
 
   const { data: { publicUrl } } = db.storage.from('documentos').getPublicUrl(storagePath)
