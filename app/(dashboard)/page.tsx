@@ -171,7 +171,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     : <span className="text-slate-300">—</span>}
                 </td>
                 <td className="px-2 py-2.5">
-                  <Link href={`/leyes/${law.id}`} className="text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">
+                  <Link href={`/leyes/${law.id}`} className="inline-flex items-center gap-1 border border-blue-200 text-blue-600 rounded-lg px-3 py-1 text-xs font-medium hover:bg-blue-50 transition-colors whitespace-nowrap">
                     Ver →
                   </Link>
                 </td>
