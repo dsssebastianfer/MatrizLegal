@@ -125,33 +125,34 @@ export default function DocumentSection({ lawId, documents: initial, documentosC
 
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <h2 className="font-semibold text-slate-800">Documentos ({docs.length})</h2>
-        <label className={`cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
-          uploading
-            ? 'border-blue-200 text-blue-400 bg-blue-50 cursor-wait'
-            : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-        }`}>
-          {uploading ? (
-            <>
-              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-              Subiendo...
-            </>
-          ) : (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              Subir documento
-            </>
-          )}
-          <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
-            onChange={handleUpload} disabled={uploading} />
-        </label>
+        <div className="flex flex-col items-end gap-1">
+          <label className={`cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+            uploading
+              ? 'border-blue-200 text-blue-400 bg-blue-50 cursor-wait'
+              : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+          }`}>
+            {uploading ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                Subiendo...
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Subir documento
+              </>
+            )}
+            <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+              onChange={handleUpload} disabled={uploading} />
+          </label>
+          <p className="text-xs text-slate-400">PDF o Word (.doc, .docx), máximo 7MB</p>
+        </div>
       </div>
-
-      <p className="px-6 pt-3 text-xs text-slate-400">PDF o Word (.doc, .docx), máximo 7MB</p>
 
       {error && (
         <div className="mx-6 mt-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
