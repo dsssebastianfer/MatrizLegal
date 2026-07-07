@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Article } from '@/lib/types'
+import { compareArticulos } from '@/lib/articulo-utils'
 
 interface Props {
   articles: Article[]
@@ -52,6 +53,11 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   const [addingNew, setAddingNew] = useState(false)
   const [newRow, setNewRow] = useState<Partial<EditableFields>>({})
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  const sortedArticles = useMemo(
+    () => [...articles].sort((a, b) => compareArticulos(a.articulo, b.articulo)),
+    [articles]
+  )
 
   async function updateArticle(id: string, field: keyof EditableFields, value: string | boolean) {
     setSaving(id)
@@ -115,7 +121,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {articles.map(article => (
+            {sortedArticles.map(article => (
               <tr key={article.id} className={`hover:bg-slate-50 ${saving === article.id ? 'opacity-60' : ''}`}>
                 <td className="px-4 py-2">
                   <EditableCell value={article.articulo ?? ''} onSave={v => updateArticle(article.id, 'articulo', v)} />
