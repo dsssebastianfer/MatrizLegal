@@ -4,33 +4,46 @@ import { NextRequest, NextResponse } from 'next/server'
 
 type Params = { params: Promise<{ id: string }> }
 
+const MAX_SIZE = 7 * 1024 * 1024
+const ALLOWED_EXT = ['pdf', 'doc', 'docx']
+
 export async function POST(request: NextRequest, { params }: Params) {
   const { id } = await params
   const email = await getSessionEmail()
   if (!email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const formData = await request.formData()
-  const file = formData.get('file') as File | null
-  if (!file) return NextResponse.json({ error: 'Sin archivo' }, { status: 400 })
+  const { nombre, size } = await request.json()
+  if (!nombre || typeof size !== 'number')
+    return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
 
-  const ext = (file.name.split('.').pop() ?? '').toLowerCase()
-  if (!['pdf', 'doc', 'docx'].includes(ext))
+  const ext = (nombre.split('.').pop() ?? '').toLowerCase()
+  if (!ALLOWED_EXT.includes(ext))
     return NextResponse.json({ error: 'Solo se permiten PDF y Word (.pdf, .doc, .docx)' }, { status: 400 })
+  if (size > MAX_SIZE)
+    return NextResponse.json({ error: 'El archivo supera el máximo de 7MB' }, { status: 400 })
 
   const db = createDataClient()
   const storagePath = `leyes/${id}/${Date.now()}.${ext}`
-  const bytes = await file.arrayBuffer()
-  const { error: uploadError } = await db.storage
-    .from('documentos').upload(storagePath, bytes, { contentType: file.type || 'application/octet-stream', upsert: true })
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
+  const { data, error } = await db.storage.from('documentos').createSignedUploadUrl(storagePath)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const { data: { publicUrl } } = db.storage.from('documentos').getPublicUrl(storagePath)
+  return NextResponse.json({ token: data.token, path: data.path })
+}
+
+export async function PUT(request: NextRequest, { params }: Params) {
+  const { id } = await params
+  const email = await getSessionEmail()
+  if (!email) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { path, nombre } = await request.json()
+  const db = createDataClient()
+  const { data: { publicUrl } } = db.storage.from('documentos').getPublicUrl(path)
 
   const { data, error } = await db.from('documents').insert({
     law_id: id,
-    nombre: file.name,
+    nombre,
     url: publicUrl,
-    storage_path: storagePath,
+    storage_path: path,
     uploaded_by: email,
   }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

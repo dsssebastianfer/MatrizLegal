@@ -2,7 +2,11 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import type { LawDocument } from '@/lib/types'
+
+const MAX_SIZE = 7 * 1024 * 1024
+const ALLOWED_EXT = ['pdf', 'doc', 'docx']
 
 interface Props {
   lawId: string
@@ -22,21 +26,58 @@ export default function DocumentSection({ lawId, documents: initial, documentosC
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true)
     setError('')
-    const form = new FormData()
-    form.append('file', file)
-    const res = await fetch(`/api/upload/${lawId}`, { method: 'POST', body: form })
-    if (res.ok) {
-      const data = await res.json()
-      setDocs(prev => [...prev, data])
-      router.refresh()
-    } else {
-      const d = await res.json().catch(() => ({}))
-      setError(d.error ?? 'Error al subir')
+
+    const ext = (file.name.split('.').pop() ?? '').toLowerCase()
+    if (!ALLOWED_EXT.includes(ext)) {
+      setError('Solo se permiten PDF y Word (.pdf, .doc, .docx)')
+      if (fileRef.current) fileRef.current.value = ''
+      return
     }
-    setUploading(false)
-    if (fileRef.current) fileRef.current.value = ''
+    if (file.size > MAX_SIZE) {
+      setError('El archivo supera el máximo de 7MB')
+      if (fileRef.current) fileRef.current.value = ''
+      return
+    }
+
+    setUploading(true)
+    try {
+      const signRes = await fetch(`/api/upload/${lawId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: file.name, size: file.size }),
+      })
+      if (!signRes.ok) {
+        const d = await signRes.json().catch(() => ({}))
+        setError(d.error ?? 'Error al subir')
+        return
+      }
+      const { token, path } = await signRes.json()
+
+      const { error: uploadError } = await createClient().storage
+        .from('documentos').uploadToSignedUrl(path, token, file)
+      if (uploadError) {
+        setError(uploadError.message)
+        return
+      }
+
+      const confirmRes = await fetch(`/api/upload/${lawId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, nombre: file.name }),
+      })
+      if (confirmRes.ok) {
+        const data = await confirmRes.json()
+        setDocs(prev => [...prev, data])
+        router.refresh()
+      } else {
+        const d = await confirmRes.json().catch(() => ({}))
+        setError(d.error ?? 'Error al subir')
+      }
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
   async function handleDelete(docId: string) {
@@ -110,6 +151,8 @@ export default function DocumentSection({ lawId, documents: initial, documentosC
         </label>
       </div>
 
+      <p className="px-6 pt-3 text-xs text-slate-400">PDF o Word (.doc, .docx), máximo 7MB</p>
+
       {error && (
         <div className="mx-6 mt-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {error}
@@ -124,7 +167,6 @@ export default function DocumentSection({ lawId, documents: initial, documentosC
         <div className="px-6 py-8 text-center">
           <p className="text-slate-300 text-3xl mb-2">📎</p>
           <p className="text-sm text-slate-400">Sin documentos adjuntos</p>
-          <p className="text-xs text-slate-300 mt-1">PDF, Word (.docx)</p>
         </div>
       ) : (
         <ul className="divide-y divide-slate-100">
