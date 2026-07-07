@@ -32,6 +32,10 @@ export default async function LeyDetailPage({ params }: Params) {
     .order('created_at', { ascending: false }).limit(50)
   const auditItems = (auditData ?? []) as unknown as AuditLog[]
 
+  const vigenciaTexto = !law.vigencia_revisada_en
+    ? 'Vigencia no verificada'
+    : `${law.vigencia_estado === 'no_vigente' ? 'No vigente' : 'Vigente'}. Revisado el ${new Date(law.vigencia_revisada_en).toLocaleDateString('es-CL')}`
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -69,6 +73,7 @@ export default async function LeyDetailPage({ params }: Params) {
               } />
               <InfoField label="Plan de Acción" value={law.plan_accion} />
               <InfoField label="Estado Plan" value={law.estado_plan_accion} />
+              <InfoField label="Vigencia" value={vigenciaTexto} />
             </div>
             {law.aplicacion && (
               <div className="mt-3"><InfoField label="Aplicación" value={law.aplicacion} /></div>
