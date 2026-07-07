@@ -23,6 +23,7 @@ export interface Law {
   area: string | null
   documento_nombre: string | null
   documento_url: string | null
+  documentos_comentario: string | null
   created_at: string
   updated_at: string
 }
@@ -62,7 +63,6 @@ export interface LawDocument {
   url: string
   storage_path: string
   uploaded_by: string | null
-  comentario: string | null
   created_at: string
 }
 

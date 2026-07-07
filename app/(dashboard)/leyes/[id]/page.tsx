@@ -49,7 +49,7 @@ export default async function LeyDetailPage({ params }: Params) {
                 id={law.id} codigo={law.codigo}
                 periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
                 estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
-                vigencia={law.vigencia} vigencia_nota={law.vigencia_nota ?? null}
+                vigencia_nota={law.vigencia_nota ?? null}
                 vigencia_estado={law.vigencia_estado ?? null}
                 vigencia_revisada_en={law.vigencia_revisada_en ?? null}
                 vigencia_modificada_en={law.vigencia_modificada_en ?? null}
@@ -59,7 +59,7 @@ export default async function LeyDetailPage({ params }: Params) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <InfoField label="Titular" value={law.titular} />
               <InfoField label="Área" value={law.area} />
-              <InfoField label="Año Publicación" value={law.anio_publicacion} />
+              <InfoField label="Fecha Publicación" value={law.anio_publicacion} />
               <InfoField label="Mecanismo Evaluación" value={law.mecanismo_evaluacion} />
               <InfoField label="Periodicidad" value={law.periodicidad} />
               <InfoField label="Última Evaluación" value={
@@ -69,7 +69,6 @@ export default async function LeyDetailPage({ params }: Params) {
               } />
               <InfoField label="Plan de Acción" value={law.plan_accion} />
               <InfoField label="Estado Plan" value={law.estado_plan_accion} />
-              <InfoField label="Vigencia" value={law.vigencia} />
             </div>
             {law.aplicacion && (
               <div className="mt-3"><InfoField label="Aplicación" value={law.aplicacion} /></div>
@@ -79,7 +78,7 @@ export default async function LeyDetailPage({ params }: Params) {
                 id={law.id} codigo={law.codigo}
                 periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
                 estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
-                vigencia={law.vigencia} vigencia_nota={law.vigencia_nota ?? null}
+                vigencia_nota={law.vigencia_nota ?? null}
                 vigencia_estado={law.vigencia_estado ?? null}
                 vigencia_revisada_en={law.vigencia_revisada_en ?? null}
                 vigencia_modificada_en={law.vigencia_modificada_en ?? null}
@@ -105,7 +104,7 @@ export default async function LeyDetailPage({ params }: Params) {
         </div>
       </div>
 
-      <DocumentSection lawId={id} documents={documents} />
+      <DocumentSection lawId={id} documents={documents} documentosComentario={law.documentos_comentario ?? null} />
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">

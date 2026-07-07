@@ -144,7 +144,7 @@ export default function LawForm({ initial = {}, lawId }: Props) {
           </div>
         </Field>
 
-        <Field label="Año Publicación">
+        <Field label="Fecha Publicación">
           <input type="text" value={form.anio_publicacion} onChange={e => set('anio_publicacion', e.target.value)}
             className="field-input" placeholder="2024-01-15" />
         </Field>

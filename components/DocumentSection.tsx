@@ -7,10 +7,12 @@ import type { LawDocument } from '@/lib/types'
 interface Props {
   lawId: string
   documents: LawDocument[]
+  documentosComentario: string | null
 }
 
-export default function DocumentSection({ lawId, documents: initial }: Props) {
+export default function DocumentSection({ lawId, documents: initial, documentosComentario }: Props) {
   const [docs, setDocs] = useState<LawDocument[]>(initial)
+  const [comentario, setComentario] = useState(documentosComentario ?? '')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
@@ -46,15 +48,14 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
     }
   }
 
-  async function handleComentario(docId: string, comentario: string) {
-    const res = await fetch(`/api/documentos/${docId}`, {
-      method: 'PATCH',
+  async function handleComentario(value: string) {
+    const res = await fetch(`/api/leyes/${lawId}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ comentario }),
+      body: JSON.stringify({ documentos_comentario: value }),
     })
     if (res.ok) {
-      const updated = await res.json()
-      setDocs(prev => prev.map(d => d.id === docId ? { ...d, ...updated } : d))
+      setComentario(value)
       router.refresh()
     }
   }
@@ -115,6 +116,10 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
         </div>
       )}
 
+      <div className="px-6 pt-3">
+        <CommentField value={comentario} onSave={handleComentario} />
+      </div>
+
       {docs.length === 0 ? (
         <div className="px-6 py-8 text-center">
           <p className="text-slate-300 text-3xl mb-2">📎</p>
@@ -132,7 +137,6 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
                   {new Date(doc.created_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   {doc.uploaded_by && <span> · {doc.uploaded_by.split('@')[0]}</span>}
                 </p>
-                <CommentField value={doc.comentario ?? ''} onSave={v => handleComentario(doc.id, v)} />
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <a href={doc.url} target="_blank" rel="noopener noreferrer"

@@ -9,7 +9,7 @@ interface Props {
   law: Pick<Law,
     'id' | 'codigo' | 'periodicidad' | 'fecha_ultima_evaluacion' |
     'estado_cumplimiento' | 'observaciones' |
-    'vigencia' | 'vigencia_nota' | 'vigencia_estado' | 'vigencia_revisada_en' | 'vigencia_modificada_en'
+    'vigencia_nota' | 'vigencia_estado' | 'vigencia_revisada_en' | 'vigencia_modificada_en'
   >
   onClose: () => void
 }

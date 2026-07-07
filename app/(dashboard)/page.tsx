@@ -143,7 +143,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     id={law.id} codigo={law.codigo}
                     periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
                     estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
-                    vigencia={law.vigencia} vigencia_nota={law.vigencia_nota ?? null}
+                    vigencia_nota={law.vigencia_nota ?? null}
                     vigencia_estado={law.vigencia_estado ?? null}
                     vigencia_revisada_en={law.vigencia_revisada_en ?? null}
                     vigencia_modificada_en={law.vigencia_modificada_en ?? null}
@@ -159,7 +159,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     id={law.id} codigo={law.codigo}
                     periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
                     estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
-                    vigencia={law.vigencia} vigencia_nota={law.vigencia_nota ?? null}
+                    vigencia_nota={law.vigencia_nota ?? null}
                     vigencia_estado={law.vigencia_estado ?? null}
                     vigencia_revisada_en={law.vigencia_revisada_en ?? null}
                     vigencia_modificada_en={law.vigencia_modificada_en ?? null}
