@@ -39,6 +39,7 @@ export interface Article {
   no_cumple: boolean
   na: boolean
   registro_evidencia: string | null
+  orden: number | null
   created_at: string
   updated_at: string
 }

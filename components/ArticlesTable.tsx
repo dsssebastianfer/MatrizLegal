@@ -54,10 +54,43 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   const [newRow, setNewRow] = useState<Partial<EditableFields>>({})
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
-  const sortedArticles = useMemo(
-    () => [...articles].sort((a, b) => compareArticulos(a.articulo, b.articulo)),
-    [articles]
-  )
+  const sortedArticles = useMemo(() => {
+    const hasCustomOrder = articles.some(a => a.orden != null)
+    return [...articles].sort((a, b) =>
+      hasCustomOrder
+        ? (a.orden ?? Infinity) - (b.orden ?? Infinity) || compareArticulos(a.articulo, b.articulo)
+        : compareArticulos(a.articulo, b.articulo)
+    )
+  }, [articles])
+
+  async function moveArticle(id: string, direction: 'up' | 'down') {
+    const idx = sortedArticles.findIndex(a => a.id === id)
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (idx === -1 || targetIdx < 0 || targetIdx >= sortedArticles.length) return
+
+    const hasCustomOrder = sortedArticles.some(a => a.orden != null)
+    const base = hasCustomOrder ? sortedArticles : sortedArticles.map((a, i) => ({ ...a, orden: i }))
+
+    const ordenA = base[idx].orden
+    const ordenB = base[targetIdx].orden
+    const idA = base[idx].id
+    const idB = base[targetIdx].id
+    const next = base.map(a =>
+      a.id === idA ? { ...a, orden: ordenB } : a.id === idB ? { ...a, orden: ordenA } : a
+    )
+
+    setArticles(prev => prev.map(p => next.find(n => n.id === p.id) ?? p))
+
+    const toPersist = hasCustomOrder ? next.filter(a => a.id === idA || a.id === idB) : next
+    await Promise.all(toPersist.map(a =>
+      fetch(`/api/articulos/${a.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orden: a.orden }),
+      })
+    ))
+    router.refresh()
+  }
 
   async function updateArticle(id: string, field: keyof EditableFields, value: string | boolean) {
     setSaving(id)
@@ -109,6 +142,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="px-2 py-2.5 w-8"></th>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Artículo</th>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Ámbito de Aplicación</th>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Frecuencia</th>
@@ -121,8 +155,22 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {sortedArticles.map(article => (
+            {sortedArticles.map((article, i) => (
               <tr key={article.id} className={`hover:bg-slate-50 ${saving === article.id ? 'opacity-60' : ''}`}>
+                <td className="px-2 py-2">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button onClick={() => moveArticle(article.id, 'up')} disabled={i === 0}
+                      className="text-slate-300 hover:text-blue-500 disabled:opacity-0 transition-colors leading-none"
+                      title="Subir">
+                      ▲
+                    </button>
+                    <button onClick={() => moveArticle(article.id, 'down')} disabled={i === sortedArticles.length - 1}
+                      className="text-slate-300 hover:text-blue-500 disabled:opacity-0 transition-colors leading-none"
+                      title="Bajar">
+                      ▼
+                    </button>
+                  </div>
+                </td>
                 <td className="px-4 py-2">
                   <EditableCell value={article.articulo ?? ''} onSave={v => updateArticle(article.id, 'articulo', v)} />
                 </td>
@@ -169,6 +217,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
 
             {addingNew && (
               <tr className="bg-blue-50">
+                <td></td>
                 <td className="px-4 py-2">
                   <input className="w-full border border-blue-300 rounded px-2 py-1 text-xs" placeholder="Artículo"
                     value={newRow.articulo ?? ''} onChange={e => setNewRow(p => ({ ...p, articulo: e.target.value }))} />
