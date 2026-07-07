@@ -62,6 +62,7 @@ export interface LawDocument {
   url: string
   storage_path: string
   uploaded_by: string | null
+  comentario: string | null
   created_at: string
 }
 

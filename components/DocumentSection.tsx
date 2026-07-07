@@ -46,6 +46,19 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
     }
   }
 
+  async function handleComentario(docId: string, comentario: string) {
+    const res = await fetch(`/api/documentos/${docId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comentario }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setDocs(prev => prev.map(d => d.id === docId ? { ...d, ...updated } : d))
+      router.refresh()
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200">
       {deleteTarget && (
@@ -119,6 +132,7 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
                   {new Date(doc.created_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   {doc.uploaded_by && <span> · {doc.uploaded_by.split('@')[0]}</span>}
                 </p>
+                <CommentField value={doc.comentario ?? ''} onSave={v => handleComentario(doc.id, v)} />
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <a href={doc.url} target="_blank" rel="noopener noreferrer"
@@ -136,5 +150,31 @@ export default function DocumentSection({ lawId, documents: initial }: Props) {
         </ul>
       )}
     </div>
+  )
+}
+
+function CommentField({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [current, setCurrent] = useState(value)
+
+  function handleBlur() {
+    setEditing(false)
+    if (current !== value) onSave(current)
+  }
+
+  if (!editing) {
+    return (
+      <p onClick={() => setEditing(true)}
+        className="text-xs text-slate-500 mt-1 cursor-text hover:bg-blue-50 rounded px-1 -mx-1"
+        title="Click para editar">
+        {value || <span className="text-slate-300 italic">+ Agregar comentario</span>}
+      </p>
+    )
+  }
+
+  return (
+    <textarea autoFocus rows={2}
+      className="w-full mt-1 border border-blue-400 rounded px-2 py-1 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+      value={current} onChange={e => setCurrent(e.target.value)} onBlur={handleBlur} />
   )
 }
