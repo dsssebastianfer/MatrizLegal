@@ -1,7 +1,7 @@
 import { createDataClient as createClient } from '@/lib/supabase/data'
 import Link from 'next/link'
 import type { AuditLog } from '@/lib/types'
-import { groupAuditItems } from '@/lib/audit-utils'
+import { groupAuditItems, applyTipoFilter, TIPOS_CAMBIO } from '@/lib/audit-utils'
 import type { GroupedEvent } from '@/lib/audit-utils'
 import HistorialTable from '@/components/HistorialTable'
 
@@ -10,7 +10,7 @@ export interface GroupedEventWithLaw extends GroupedEvent { law: LawRef | null }
 
 const PAGE_SIZE = 100
 
-interface SearchParams { usuario?: string; ley?: string; desde?: string; hasta?: string; page?: string }
+interface SearchParams { usuario?: string; ley?: string; desde?: string; hasta?: string; tipo?: string; page?: string }
 
 function pageHref(params: SearchParams, page: number) {
   const sp = new URLSearchParams()
@@ -18,6 +18,7 @@ function pageHref(params: SearchParams, page: number) {
   if (params.ley) sp.set('ley', params.ley)
   if (params.desde) sp.set('desde', params.desde)
   if (params.hasta) sp.set('hasta', params.hasta)
+  if (params.tipo) sp.set('tipo', params.tipo)
   if (page > 1) sp.set('page', String(page))
   const qs = sp.toString()
   return `/historial${qs ? `?${qs}` : ''}`
@@ -48,6 +49,7 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
   if (params.usuario) query = query.ilike('usuario_email', `%${params.usuario}%`)
   if (params.desde)   query = query.gte('created_at', params.desde)
   if (params.hasta)   query = query.lte('created_at', params.hasta + 'T23:59:59')
+  if (params.tipo && TIPOS_CAMBIO.includes(params.tipo)) query = applyTipoFilter(query, params.tipo)
   if (filteredLawIds) {
     const ids = filteredLawIds.join(',')
     query = query.or(`registro_id.in.(${ids}),law_id.in.(${ids})`)
@@ -130,11 +132,19 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
           <input type="date" name="hasta" defaultValue={params.hasta}
             className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Tipo de cambio</label>
+          <select name="tipo" defaultValue={params.tipo ?? ''}
+            className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Todos</option>
+            {TIPOS_CAMBIO.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
+          </select>
+        </div>
         <button type="submit"
           className="bg-blue-600 text-white rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-blue-700 transition-colors">
           Filtrar
         </button>
-        {(params.usuario || params.ley || params.desde || params.hasta) && (
+        {(params.usuario || params.ley || params.desde || params.hasta || params.tipo) && (
           <a href="/historial" className="text-xs text-slate-500 hover:text-red-600 px-2 py-1.5">✕ Limpiar</a>
         )}
       </form>

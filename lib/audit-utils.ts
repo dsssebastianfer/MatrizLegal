@@ -28,6 +28,43 @@ export const DESC_STYLES: Record<string, string> = {
   'Se editó artículo':     'bg-slate-100 text-slate-600',
 }
 
+export const TIPOS_CAMBIO = [
+  'Se agregó ley', 'Se editó ley', 'Se eliminó ley',
+  'Se agregó artículo', 'Se editó artículo', 'Se quitó artículo',
+  'Verificación de vigencia', 'Se actualizó implementación', 'Se realizó revisión',
+  'Se adjuntó documento', 'Se quitó documento',
+]
+
+const VIGENCIA_CAMPOS = ['vigencia_revisada_en', 'vigencia_nota', 'vigencia_estado']
+const IMPLEMENTACION_CAMPOS = ['estado_cumplimiento', 'observaciones']
+const LAW_CAMPOS_ESPECIALES = [...VIGENCIA_CAMPOS, ...IMPLEMENTACION_CAMPOS, 'fecha_ultima_evaluacion', 'documento_url']
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function applyTipoFilter(query: any, tipo: string) {
+  switch (tipo) {
+    case 'Se agregó ley':      return query.eq('tabla', 'laws').eq('accion', 'INSERT')
+    case 'Se eliminó ley':     return query.eq('tabla', 'laws').eq('accion', 'DELETE')
+    case 'Se agregó artículo': return query.eq('tabla', 'articles').eq('accion', 'INSERT')
+    case 'Se quitó artículo':  return query.eq('tabla', 'articles').eq('accion', 'DELETE')
+    case 'Se editó artículo':  return query.eq('tabla', 'articles').eq('accion', 'UPDATE')
+    case 'Se editó ley':
+      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').not('campo', 'in', `(${LAW_CAMPOS_ESPECIALES.join(',')})`)
+    case 'Verificación de vigencia':
+      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').in('campo', VIGENCIA_CAMPOS)
+    case 'Se actualizó implementación':
+      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').in('campo', IMPLEMENTACION_CAMPOS)
+    case 'Se realizó revisión':
+      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').eq('campo', 'fecha_ultima_evaluacion')
+    case 'Se adjuntó documento':
+      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').eq('campo', 'documento_url')
+        .not('valor_nuevo', 'is', null).neq('valor_nuevo', '')
+    case 'Se quitó documento':
+      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').eq('campo', 'documento_url')
+        .or('valor_nuevo.is.null,valor_nuevo.eq.')
+    default: return query
+  }
+}
+
 export interface GroupedEvent {
   id: string
   timestamp: string
