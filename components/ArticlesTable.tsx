@@ -53,6 +53,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   const [addingNew, setAddingNew] = useState(false)
   const [newRow, setNewRow] = useState<Partial<EditableFields>>({})
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [error, setError] = useState('')
 
   const sortedArticles = useMemo(() => {
     const hasCustomOrder = articles.some(a => a.orden != null)
@@ -94,6 +95,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
 
   async function updateArticle(id: string, field: keyof EditableFields, value: string | boolean) {
     setSaving(id)
+    setError('')
     const res = await fetch(`/api/articulos/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -103,15 +105,24 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
       const updated = await res.json()
       setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a))
       router.refresh()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      setError(d.error ?? 'Error al guardar el cambio')
     }
     setSaving(null)
   }
 
   async function deleteArticle(id: string) {
-    await fetch(`/api/articulos/${id}`, { method: 'DELETE' })
-    setArticles(prev => prev.filter(a => a.id !== id))
+    setError('')
+    const res = await fetch(`/api/articulos/${id}`, { method: 'DELETE' })
     setDeleteTarget(null)
-    router.refresh()
+    if (res.ok) {
+      setArticles(prev => prev.filter(a => a.id !== id))
+      router.refresh()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      setError(d.error ?? 'Error al eliminar el artículo')
+    }
   }
 
   async function saveNewRow() {
@@ -136,6 +147,12 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
           onConfirm={() => deleteArticle(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+
+      {error && (
+        <div className="mx-6 mt-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {error}
+        </div>
       )}
 
       <div className="overflow-x-auto">
