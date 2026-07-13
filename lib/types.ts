@@ -54,6 +54,7 @@ export interface AuditLog {
   valor_anterior: string | null
   valor_nuevo: string | null
   usuario_email: string | null
+  articulo_ref: string | null
   created_at: string
 }
 

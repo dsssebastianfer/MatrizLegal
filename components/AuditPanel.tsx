@@ -51,6 +51,9 @@ export default function AuditPanel({ items, lawCodigo }: { items: AuditLog[]; la
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${DESC_STYLES[event.descripcion] ?? 'bg-slate-100 text-slate-600'}`}>
                         {event.descripcion}
                       </span>
+                      {event.articulo_ref && (
+                        <span className="ml-1.5 text-xs text-slate-500">{event.articulo_ref}</span>
+                      )}
                     </td>
                   </tr>
                 ))}

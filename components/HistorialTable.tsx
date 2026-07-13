@@ -48,6 +48,9 @@ export default function HistorialTable({ events }: { events: GroupedEventWithLaw
                   <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${DESC_STYLES[event.descripcion] ?? 'bg-slate-100 text-slate-600'}`}>
                     {event.descripcion}
                   </span>
+                  {event.articulo_ref && (
+                    <span className="ml-1.5 text-xs text-slate-500">{event.articulo_ref}</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -63,7 +66,7 @@ export default function HistorialTable({ events }: { events: GroupedEventWithLaw
   )
 }
 
-export function DetailModal({ event, onClose }: { event: { descripcion: string; law?: { item: number | null; codigo: string } | null; timestamp: string; usuario_email: string | null; changes: AuditLog[] }; onClose: () => void }) {
+export function DetailModal({ event, onClose }: { event: { descripcion: string; law?: { item: number | null; codigo: string } | null; articulo_ref?: string | null; timestamp: string; usuario_email: string | null; changes: AuditLog[] }; onClose: () => void }) {
   const relevant = event.changes.filter(c => c.campo !== 'documento_nombre')
 
   return (
@@ -76,6 +79,7 @@ export function DetailModal({ event, onClose }: { event: { descripcion: string; 
               <p className="text-sm text-slate-500 mt-0.5">
                 {event.law.item != null && <span className="text-slate-400">#{event.law.item} · </span>}
                 {event.law.codigo}
+                {event.articulo_ref && <span> · {event.articulo_ref}</span>}
               </p>
             )}
           </div>

@@ -36,6 +36,7 @@ export interface GroupedEvent {
   law_id: string | null
   tabla: string
   descripcion: string
+  articulo_ref: string | null
   changes: AuditLog[]
 }
 
@@ -80,6 +81,7 @@ export function groupAuditItems(items: AuditLog[]): GroupedEvent[] {
       law_id: grp[0].law_id ?? null,
       tabla: grp[0].tabla,
       descripcion: getDescripcion(grp),
+      articulo_ref: grp.find(i => i.articulo_ref)?.articulo_ref ?? null,
       changes: grp,
     }
   })
