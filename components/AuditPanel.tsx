@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { AuditLog } from '@/lib/types'
 import { groupAuditItems, DESC_STYLES } from '@/lib/audit-utils'
 import type { GroupedEvent } from '@/lib/audit-utils'
 import { DetailModal } from './HistorialTable'
 
-export default function AuditPanel({ items }: { items: AuditLog[] }) {
+export default function AuditPanel({ items, lawCodigo }: { items: AuditLog[]; lawCodigo: string }) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<GroupedEvent | null>(null)
   const grouped = groupAuditItems(items)
@@ -56,6 +57,12 @@ export default function AuditPanel({ items }: { items: AuditLog[] }) {
               </tbody>
             </table>
           )}
+          <div className="px-4 py-3 border-t border-slate-100">
+            <Link href={`/historial?ley=${encodeURIComponent(lawCodigo)}`}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800">
+              Ver historial completo →
+            </Link>
+          </div>
         </div>
       )}
 

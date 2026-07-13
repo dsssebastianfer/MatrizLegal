@@ -118,7 +118,7 @@ export default async function LeyDetailPage({ params }: Params) {
         <ArticlesTable articles={articles} lawId={id} />
       </div>
 
-      <AuditPanel items={auditItems} />
+      <AuditPanel items={auditItems} lawCodigo={law.codigo} />
     </div>
   )
 }

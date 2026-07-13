@@ -1,4 +1,5 @@
 import { createDataClient as createClient } from '@/lib/supabase/data'
+import Link from 'next/link'
 import type { AuditLog } from '@/lib/types'
 import { groupAuditItems } from '@/lib/audit-utils'
 import type { GroupedEvent } from '@/lib/audit-utils'
@@ -7,10 +8,26 @@ import HistorialTable from '@/components/HistorialTable'
 export interface LawRef { item: number | null; codigo: string }
 export interface GroupedEventWithLaw extends GroupedEvent { law: LawRef | null }
 
-interface SearchParams { usuario?: string; ley?: string; desde?: string; hasta?: string }
+const PAGE_SIZE = 100
+
+interface SearchParams { usuario?: string; ley?: string; desde?: string; hasta?: string; page?: string }
+
+function pageHref(params: SearchParams, page: number) {
+  const sp = new URLSearchParams()
+  if (params.usuario) sp.set('usuario', params.usuario)
+  if (params.ley) sp.set('ley', params.ley)
+  if (params.desde) sp.set('desde', params.desde)
+  if (params.hasta) sp.set('hasta', params.hasta)
+  if (page > 1) sp.set('page', String(page))
+  const qs = sp.toString()
+  return `/historial${qs ? `?${qs}` : ''}`
+}
 
 export default async function HistorialPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams
+  const page = Math.max(1, parseInt(params.page ?? '1', 10) || 1)
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
   const supabase = createClient()
 
   // Si hay filtro por ley, resolver IDs coincidentes
@@ -24,9 +41,9 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
 
   let query = supabase
     .from('audit_log')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(200)
+    .range(from, to)
 
   if (params.usuario) query = query.ilike('usuario_email', `%${params.usuario}%`)
   if (params.desde)   query = query.gte('created_at', params.desde)
@@ -36,8 +53,9 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
     query = query.or(`registro_id.in.(${ids}),law_id.in.(${ids})`)
   }
 
-  const { data: rawItems = [] } = await query
+  const { data: rawItems = [], count } = await query
   const items = (rawItems ?? []) as unknown as AuditLog[]
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE))
 
   // IDs de leyes directos (eventos de laws) + law_ids de artículos nuevos (con columna law_id)
   const directLawIds = [...new Set([
@@ -88,7 +106,7 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Historial de Cambios</h1>
-        <span className="text-sm text-slate-500">{grouped.length} eventos</span>
+        <span className="text-sm text-slate-500">{count ?? 0} cambios en total</span>
       </div>
 
       <form className="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap gap-3 items-end">
@@ -122,6 +140,28 @@ export default async function HistorialPage({ searchParams }: { searchParams: Pr
       </form>
 
       <HistorialTable events={grouped} />
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-500">Página {page} de {totalPages}</span>
+        <div className="flex gap-2">
+          {page > 1 ? (
+            <Link href={pageHref(params, page - 1)}
+              className="text-sm font-medium text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors">
+              ← Anterior
+            </Link>
+          ) : (
+            <span className="text-sm font-medium text-slate-300 border border-slate-200 rounded-lg px-3 py-1.5">← Anterior</span>
+          )}
+          {page < totalPages ? (
+            <Link href={pageHref(params, page + 1)}
+              className="text-sm font-medium text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors">
+              Siguiente →
+            </Link>
+          ) : (
+            <span className="text-sm font-medium text-slate-300 border border-slate-200 rounded-lg px-3 py-1.5">Siguiente →</span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
