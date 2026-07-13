@@ -4,6 +4,8 @@
 -- ============================================================
 
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS articulo_ref TEXT;
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS law_id UUID;
+CREATE INDEX IF NOT EXISTS idx_audit_log_law_id ON audit_log(law_id);
 
 CREATE OR REPLACE FUNCTION log_article_changes()
 RETURNS TRIGGER
