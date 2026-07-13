@@ -2,8 +2,8 @@ import { createDataClient as createClient } from '@/lib/supabase/data'
 import Link from 'next/link'
 import LawsFilter from '@/components/LawsFilter'
 import ExpandableCell from '@/components/ExpandableCell'
-import ReviewStatusBadge from '@/components/ReviewStatusBadge'
 import VigenciaStatus from '@/components/VigenciaStatus'
+import { calcularImplementacion, menorFrecuencia } from '@/lib/law-metrics'
 import type { Law } from '@/lib/types'
 
 const PERIODOS: Record<string, number> = { mensual: 30, bianual: 60, trimestral: 90, semestral: 180, anual: 365 }
@@ -65,6 +65,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const { data: allLaws = [] } = await supabase.from('laws').select('periodicidad')
   const periodicidades = [...new Set((allLaws ?? []).map((l: { periodicidad: string | null }) => l.periodicidad).filter(Boolean))].sort() as string[]
 
+  const lawIds = (laws ?? []).map((l: Law) => l.id)
+  const { data: articles = [] } = lawIds.length > 0
+    ? await supabase.from('articles').select('law_id, cumple, parcial, no_cumple, na, frecuencia_evaluacion').in('law_id', lawIds)
+    : { data: [] }
+  const articlesByLaw = new Map<string, { cumple: boolean; parcial: boolean; na: boolean; frecuencia_evaluacion: string | null }[]>()
+  for (const a of (articles ?? []) as { law_id: string; cumple: boolean; parcial: boolean; na: boolean; frecuencia_evaluacion: string | null }[]) {
+    if (!articlesByLaw.has(a.law_id)) articlesByLaw.set(a.law_id, [])
+    articlesByLaw.get(a.law_id)!.push(a)
+  }
+
   const total = laws?.length ?? 0
   const cumple = laws?.filter(l => l.estado_cumplimiento === 'en_cumplimiento').length ?? 0
   const parcial = laws?.filter(l => l.estado_cumplimiento === 'en_implementacion').length ?? 0
@@ -124,25 +134,28 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Period.</th>
               <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Vigencia</th>
               <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Última Eval.</th>
-              <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
+              <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Implementación</th>
               <th className="px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Doc.</th>
               <th className="px-2 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(laws ?? []).map((law: Law) => (
+            {(laws ?? []).map((law: Law) => {
+              const lawArticles = articlesByLaw.get(law.id) ?? []
+              const pct = calcularImplementacion(lawArticles)
+              const periodo = menorFrecuencia(lawArticles.map(a => a.frecuencia_evaluacion))
+              return (
               <tr key={law.id} className="hover:bg-slate-50 transition-colors align-top">
                 <td className="px-2 py-2.5 text-slate-400">{law.item}</td>
                 <td className="px-2 py-2.5 font-medium text-slate-800 break-words">{law.codigo}</td>
                 <td className="px-2 py-2.5"><ExpandableCell text={law.descripcion} /></td>
                 <td className="px-2 py-2.5 text-slate-500 break-words">{law.area}</td>
                 <td className="px-2 py-2.5 text-slate-500 break-words">{law.mecanismo_evaluacion}</td>
-                <td className="px-2 py-2.5 text-slate-500">{law.periodicidad}</td>
+                <td className="px-2 py-2.5 text-slate-500">{periodo ?? <span className="text-slate-300">—</span>}</td>
                 <td className="px-2 py-2.5">
                   <VigenciaStatus
                     id={law.id} codigo={law.codigo}
                     periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
-                    estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
                     vigencia_nota={law.vigencia_nota ?? null}
                     vigencia_estado={law.vigencia_estado ?? null}
                     vigencia_revisada_en={law.vigencia_revisada_en ?? null}
@@ -155,15 +168,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     : '—'}
                 </td>
                 <td className="px-2 py-2.5">
-                  <ReviewStatusBadge
-                    id={law.id} codigo={law.codigo}
-                    periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
-                    estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
-                    vigencia_nota={law.vigencia_nota ?? null}
-                    vigencia_estado={law.vigencia_estado ?? null}
-                    vigencia_revisada_en={law.vigencia_revisada_en ?? null}
-                    vigencia_modificada_en={law.vigencia_modificada_en ?? null}
-                  />
+                  {pct !== null ? (
+                    <>
+                      <div className="font-semibold text-slate-700">{pct}%</div>
+                      <div className="text-slate-400">{lawArticles.length} artículo{lawArticles.length !== 1 ? 's' : ''}</div>
+                    </>
+                  ) : (
+                    <span className="text-slate-300">—</span>
+                  )}
                 </td>
                 <td className="px-2 py-2.5 text-center">
                   {law.documento_url
@@ -176,7 +188,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                   </Link>
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
         {(!laws || laws.length === 0) && (

@@ -82,7 +82,6 @@ export default async function LeyDetailPage({ params }: Params) {
               <LawDetailActions
                 id={law.id} codigo={law.codigo}
                 periodicidad={law.periodicidad} fecha_ultima_evaluacion={law.fecha_ultima_evaluacion}
-                estado_cumplimiento={law.estado_cumplimiento} observaciones={law.observaciones ?? null}
                 vigencia_nota={law.vigencia_nota ?? null}
                 vigencia_estado={law.vigencia_estado ?? null}
                 vigencia_revisada_en={law.vigencia_revisada_en ?? null}

@@ -2,23 +2,16 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Law, EstadoCumplimiento } from '@/lib/types'
+import type { Law } from '@/lib/types'
 import { diasDesdeEval } from '@/lib/revision-utils'
 
 interface Props {
   law: Pick<Law,
     'id' | 'codigo' | 'periodicidad' | 'fecha_ultima_evaluacion' |
-    'estado_cumplimiento' | 'observaciones' |
     'vigencia_nota' | 'vigencia_estado' | 'vigencia_revisada_en' | 'vigencia_modificada_en'
   >
   onClose: () => void
 }
-
-const ESTADOS: { value: EstadoCumplimiento; label: string; color: string }[] = [
-  { value: 'en_cumplimiento',   label: 'En Cumplimiento',   color: 'border-teal-500 bg-teal-50 text-teal-700' },
-  { value: 'en_implementacion', label: 'En Implementación', color: 'border-blue-500 bg-blue-50 text-blue-700' },
-  { value: 'no_cumple',         label: 'No Cumplimiento',   color: 'border-red-500 bg-red-50 text-red-700' },
-]
 
 function fmtDate(iso: string | Date) {
   return new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -41,13 +34,6 @@ export default function ReviewModal({ law, onClose }: Props) {
   const [loadingHistorial,     setLoadingHistorial]    = useState(false)
   const [showHistorial,        setShowHistorial]       = useState(false)
 
-  // Implementación
-  const [estado, setEstado] = useState<EstadoCumplimiento>(
-    (['en_cumplimiento', 'en_implementacion', 'no_cumple'].includes(law.estado_cumplimiento ?? '')
-      ? law.estado_cumplimiento! : 'en_cumplimiento')
-  )
-  const [observaciones, setObservaciones] = useState(law.observaciones ?? '')
-  const [implementacionDirty, setImplementacionDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
   const dias = diasDesdeEval(law.fecha_ultima_evaluacion)
@@ -101,11 +87,6 @@ export default function ReviewModal({ law, onClose }: Props) {
         vigencia_revisada_en: vigenciaRevisadaEn || null,
         vigencia_modificada_en: vigenciaModificadaEn || null,
       }
-      if (implementacionDirty) {
-        body.estado_cumplimiento = estado
-        body.observaciones = observaciones || null
-        body.fecha_ultima_evaluacion = today
-      }
       const res = await fetch(`/api/leyes/${law.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -134,7 +115,7 @@ export default function ReviewModal({ law, onClose }: Props) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between shrink-0">
           <div>
-            <h2 className="font-semibold text-slate-800">Actualizar revisión</h2>
+            <h2 className="font-semibold text-slate-800">Revisar vigencia</h2>
             <p className="text-sm text-slate-500 mt-0.5">{law.codigo}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl leading-none mt-0.5">×</button>
@@ -234,28 +215,6 @@ export default function ReviewModal({ law, onClose }: Props) {
                 {law.periodicidad && <span> · Periodicidad: {law.periodicidad}</span>}
               </div>
             )}
-
-            {/* ── Implementación ── */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Implementación</label>
-              <div className="grid grid-cols-3 gap-2">
-                {ESTADOS.map(e => (
-                  <button key={e.value} onClick={() => { setEstado(e.value); setImplementacionDirty(true) }}
-                    className={`px-3 py-2.5 rounded-lg text-sm border-2 text-center font-medium transition-colors ${
-                      implementacionDirty && estado === e.value ? e.color : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}>
-                    {e.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-              <textarea value={observaciones} onChange={e => { setObservaciones(e.target.value); setImplementacionDirty(true) }} rows={3}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Describe el estado actual de implementación..." />
-            </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-700">{error}</div>
