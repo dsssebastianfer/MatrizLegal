@@ -37,6 +37,7 @@ export const TIPOS_CAMBIO = [
 
 const VIGENCIA_CAMPOS = ['vigencia_revisada_en', 'vigencia_nota', 'vigencia_estado']
 const IMPLEMENTACION_CAMPOS = ['estado_cumplimiento', 'observaciones']
+const ARTICULO_ESTADO_CAMPOS = ['cumple', 'parcial', 'no_cumple', 'na']
 const LAW_CAMPOS_ESPECIALES = [...VIGENCIA_CAMPOS, ...IMPLEMENTACION_CAMPOS, 'fecha_ultima_evaluacion', 'documento_url']
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,13 +47,16 @@ export function applyTipoFilter(query: any, tipo: string) {
     case 'Se eliminó ley':     return query.eq('tabla', 'laws').eq('accion', 'DELETE')
     case 'Se agregó artículo': return query.eq('tabla', 'articles').eq('accion', 'INSERT')
     case 'Se quitó artículo':  return query.eq('tabla', 'articles').eq('accion', 'DELETE')
-    case 'Se editó artículo':  return query.eq('tabla', 'articles').eq('accion', 'UPDATE')
+    case 'Se editó artículo':
+      return query.eq('tabla', 'articles').eq('accion', 'UPDATE').not('campo', 'in', `(${ARTICULO_ESTADO_CAMPOS.join(',')})`)
     case 'Se editó ley':
       return query.eq('tabla', 'laws').eq('accion', 'UPDATE').not('campo', 'in', `(${LAW_CAMPOS_ESPECIALES.join(',')})`)
     case 'Verificación de vigencia':
       return query.eq('tabla', 'laws').eq('accion', 'UPDATE').in('campo', VIGENCIA_CAMPOS)
     case 'Se actualizó implementación':
-      return query.eq('tabla', 'laws').eq('accion', 'UPDATE').in('campo', IMPLEMENTACION_CAMPOS)
+      return query.eq('accion', 'UPDATE').or(
+        `and(tabla.eq.laws,campo.in.(${IMPLEMENTACION_CAMPOS.join(',')})),and(tabla.eq.articles,campo.in.(${ARTICULO_ESTADO_CAMPOS.join(',')}))`
+      )
     case 'Se realizó revisión':
       return query.eq('tabla', 'laws').eq('accion', 'UPDATE').eq('campo', 'fecha_ultima_evaluacion')
     case 'Se adjuntó documento':
@@ -85,8 +89,10 @@ export function getDescripcion(items: AuditLog[]): string {
   // Vigencia tiene máxima prioridad
   if (campos.includes('vigencia_revisada_en') || campos.includes('vigencia_nota') || campos.includes('vigencia_estado'))
     return 'Verificación de vigencia'
-  // Cambio de implementación (estado/observaciones — solo desde el modal)
+  // Cambio de implementación (estado/observaciones de la ley, o cumple/parcial/no_cumple/na de un artículo)
   if (campos.includes('estado_cumplimiento') || campos.includes('observaciones'))
+    return 'Se actualizó implementación'
+  if (tabla === 'articles' && campos.some(c => ARTICULO_ESTADO_CAMPOS.includes(c ?? '')))
     return 'Se actualizó implementación'
   if (campos.includes('fecha_ultima_evaluacion')) return 'Se realizó revisión'
   if (campos.includes('documento_url')) {
