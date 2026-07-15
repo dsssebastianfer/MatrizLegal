@@ -252,22 +252,22 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
                 </td>
                 <td className="px-4 py-2 text-center">
                   <div className="flex justify-center">
-                    <CheckCell checked={article.cumple} onChange={() => updateEstado(article.id, 'cumple')} disabled={locked} />
+                    <CheckCell checked={article.cumple} onChange={() => updateEstado(article.id, 'cumple')} />
                   </div>
                 </td>
                 <td className="px-4 py-2 text-center">
                   <div className="flex justify-center">
-                    <CheckCell checked={article.parcial} onChange={() => updateEstado(article.id, 'parcial')} disabled={locked} />
+                    <CheckCell checked={article.parcial} onChange={() => updateEstado(article.id, 'parcial')} />
                   </div>
                 </td>
                 <td className="px-4 py-2 text-center">
                   <div className="flex justify-center">
-                    <CheckCell checked={article.no_cumple} onChange={() => updateEstado(article.id, 'no_cumple')} disabled={locked} />
+                    <CheckCell checked={article.no_cumple} onChange={() => updateEstado(article.id, 'no_cumple')} />
                   </div>
                 </td>
                 <td className="px-4 py-2 text-center">
                   <div className="flex justify-center">
-                    <CheckCell checked={article.na} onChange={() => updateEstado(article.id, 'na')} disabled={locked} />
+                    <CheckCell checked={article.na} onChange={() => updateEstado(article.id, 'na')} />
                   </div>
                 </td>
                 <td className="px-4 py-2">
