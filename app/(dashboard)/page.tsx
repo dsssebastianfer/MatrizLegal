@@ -121,7 +121,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             <col className="w-[11%]" />
             <col className="w-[8%]" />
             <col className="w-[8%]" />
-            <col className="w-8" />
             <col className="w-20" />
           </colgroup>
           <thead>
@@ -135,7 +134,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Vigencia</th>
               <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Última Eval.</th>
               <th className="px-2 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Implementación</th>
-              <th className="px-2 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Doc.</th>
               <th className="px-2 py-3"></th>
             </tr>
           </thead>
@@ -176,11 +174,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                   ) : (
                     <span className="text-slate-300">—</span>
                   )}
-                </td>
-                <td className="px-2 py-2.5 text-center">
-                  {law.documento_url
-                    ? <span title={law.documento_nombre ?? ''} className="text-blue-500">📎</span>
-                    : <span className="text-slate-300">—</span>}
                 </td>
                 <td className="px-2 py-2.5">
                   <Link href={`/leyes/${law.id}`} className="inline-flex items-center gap-1 border border-blue-200 text-blue-600 rounded-lg px-3 py-1 text-xs font-medium hover:bg-blue-50 transition-colors whitespace-nowrap">
