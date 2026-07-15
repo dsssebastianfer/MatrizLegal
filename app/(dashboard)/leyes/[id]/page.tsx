@@ -110,12 +110,7 @@ export default async function LeyDetailPage({ params }: Params) {
 
       <DocumentSection lawId={id} documents={documents} documentosComentario={law.documentos_comentario ?? null} />
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800">Artículos ({articles.length})</h2>
-        </div>
-        <ArticlesTable articles={articles} lawId={id} />
-      </div>
+      <ArticlesTable articles={articles} lawId={id} />
 
       <AuditPanel items={auditItems} lawCodigo={law.codigo} />
     </div>

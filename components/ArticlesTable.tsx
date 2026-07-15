@@ -12,18 +12,22 @@ interface Props {
 
 type EditableFields = Pick<Article, 'articulo' | 'ambito_aplicacion' | 'frecuencia_evaluacion' | 'cumple' | 'parcial' | 'no_cumple' | 'na' | 'registro_evidencia'>
 
-function CheckCell({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function CheckCell({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
       onClick={() => onChange(!checked)}
+      disabled={disabled}
       className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
         checked ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 hover:border-blue-400'
-      }`}
+      } disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-300`}
     >
       {checked && <span className="text-xs">✓</span>}
     </button>
   )
 }
+
+const ESTADO_FIELDS = ['cumple', 'parcial', 'no_cumple', 'na'] as const
+type EstadoField = typeof ESTADO_FIELDS[number]
 
 function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -54,6 +58,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   const [newRow, setNewRow] = useState<Partial<EditableFields>>({})
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [locked, setLocked] = useState(true)
 
   const sortedArticles = useMemo(() => {
     const hasCustomOrder = articles.some(a => a.orden != null)
@@ -112,6 +117,31 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
     setSaving(null)
   }
 
+  async function updateEstado(id: string, field: EstadoField) {
+    const article = articles.find(a => a.id === id)
+    if (!article) return
+    const turningOn = !article[field]
+    const values: Record<EstadoField, boolean> = { cumple: false, parcial: false, no_cumple: false, na: false }
+    if (turningOn) values[field] = true
+
+    setSaving(id)
+    setError('')
+    const res = await fetch(`/api/articulos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(values),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a))
+      router.refresh()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      setError(d.error ?? 'Error al guardar el cambio')
+    }
+    setSaving(null)
+  }
+
   async function deleteArticle(id: string) {
     setError('')
     const res = await fetch(`/api/articulos/${id}`, { method: 'DELETE' })
@@ -123,6 +153,15 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
       const d = await res.json().catch(() => ({}))
       setError(d.error ?? 'Error al eliminar el artículo')
     }
+  }
+
+  function setNewRowEstado(field: EstadoField) {
+    setNewRow(prev => {
+      const turningOn = !prev[field]
+      const values: Record<EstadoField, boolean> = { cumple: false, parcial: false, no_cumple: false, na: false }
+      if (turningOn) values[field] = true
+      return { ...prev, ...values }
+    })
   }
 
   async function saveNewRow() {
@@ -141,13 +180,25 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   }
 
   return (
-    <div>
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       {deleteTarget && (
         <DeleteConfirmModal
           onConfirm={() => deleteArticle(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
         />
       )}
+
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 className="font-semibold text-slate-800">Artículos ({sortedArticles.length})</h2>
+        <button onClick={() => setLocked(l => !l)}
+          className={`text-sm font-medium rounded-lg px-3 py-1.5 border transition-colors ${
+            locked
+              ? 'border-slate-300 text-slate-600 hover:bg-slate-50'
+              : 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100'
+          }`}>
+          {locked ? 'Editar' : 'Terminar edición'}
+        </button>
+      </div>
 
       {error && (
         <div className="mx-6 mt-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -175,64 +226,68 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
             {sortedArticles.map((article, i) => (
               <tr key={article.id} className={`hover:bg-slate-50 ${saving === article.id ? 'opacity-60' : ''}`}>
                 <td className="px-2 py-2">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <button onClick={() => moveArticle(article.id, 'up')} disabled={i === 0}
-                      className="text-slate-300 hover:text-blue-500 disabled:opacity-0 transition-colors leading-none"
-                      title="Subir">
-                      ▲
+                  {!locked && (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <button onClick={() => moveArticle(article.id, 'up')} disabled={i === 0}
+                        className="text-slate-300 hover:text-blue-500 disabled:opacity-0 transition-colors leading-none"
+                        title="Subir">
+                        ▲
+                      </button>
+                      <button onClick={() => moveArticle(article.id, 'down')} disabled={i === sortedArticles.length - 1}
+                        className="text-slate-300 hover:text-blue-500 disabled:opacity-0 transition-colors leading-none"
+                        title="Bajar">
+                        ▼
+                      </button>
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-2">
+                  <EditableCell value={article.articulo ?? ''} onSave={v => updateArticle(article.id, 'articulo', v)} disabled={locked} />
+                </td>
+                <td className="px-4 py-2">
+                  <EditableCell value={article.ambito_aplicacion ?? ''} onSave={v => updateArticle(article.id, 'ambito_aplicacion', v)} multiline disabled={locked} />
+                </td>
+                <td className="px-4 py-2">
+                  <EditableCell value={article.frecuencia_evaluacion ?? ''} onSave={v => updateArticle(article.id, 'frecuencia_evaluacion', v)} disabled={locked} />
+                </td>
+                <td className="px-4 py-2 text-center">
+                  <div className="flex justify-center">
+                    <CheckCell checked={article.cumple} onChange={() => updateEstado(article.id, 'cumple')} disabled={locked} />
+                  </div>
+                </td>
+                <td className="px-4 py-2 text-center">
+                  <div className="flex justify-center">
+                    <CheckCell checked={article.parcial} onChange={() => updateEstado(article.id, 'parcial')} disabled={locked} />
+                  </div>
+                </td>
+                <td className="px-4 py-2 text-center">
+                  <div className="flex justify-center">
+                    <CheckCell checked={article.no_cumple} onChange={() => updateEstado(article.id, 'no_cumple')} disabled={locked} />
+                  </div>
+                </td>
+                <td className="px-4 py-2 text-center">
+                  <div className="flex justify-center">
+                    <CheckCell checked={article.na} onChange={() => updateEstado(article.id, 'na')} disabled={locked} />
+                  </div>
+                </td>
+                <td className="px-4 py-2">
+                  <EditableCell value={article.registro_evidencia ?? ''} onSave={v => updateArticle(article.id, 'registro_evidencia', v)} multiline disabled={locked} />
+                </td>
+                <td className="px-4 py-2">
+                  {!locked && (
+                    <button
+                      onClick={() => setDeleteTarget(article.id)}
+                      className="text-slate-300 hover:text-red-500 transition-colors text-xs"
+                      title="Eliminar artículo"
+                    >
+                      ✕
                     </button>
-                    <button onClick={() => moveArticle(article.id, 'down')} disabled={i === sortedArticles.length - 1}
-                      className="text-slate-300 hover:text-blue-500 disabled:opacity-0 transition-colors leading-none"
-                      title="Bajar">
-                      ▼
-                    </button>
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  <EditableCell value={article.articulo ?? ''} onSave={v => updateArticle(article.id, 'articulo', v)} />
-                </td>
-                <td className="px-4 py-2">
-                  <EditableCell value={article.ambito_aplicacion ?? ''} onSave={v => updateArticle(article.id, 'ambito_aplicacion', v)} multiline />
-                </td>
-                <td className="px-4 py-2">
-                  <EditableCell value={article.frecuencia_evaluacion ?? ''} onSave={v => updateArticle(article.id, 'frecuencia_evaluacion', v)} />
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <div className="flex justify-center">
-                    <CheckCell checked={article.cumple} onChange={v => updateArticle(article.id, 'cumple', v)} />
-                  </div>
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <div className="flex justify-center">
-                    <CheckCell checked={article.parcial} onChange={v => updateArticle(article.id, 'parcial', v)} />
-                  </div>
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <div className="flex justify-center">
-                    <CheckCell checked={article.no_cumple} onChange={v => updateArticle(article.id, 'no_cumple', v)} />
-                  </div>
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <div className="flex justify-center">
-                    <CheckCell checked={article.na} onChange={v => updateArticle(article.id, 'na', v)} />
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  <EditableCell value={article.registro_evidencia ?? ''} onSave={v => updateArticle(article.id, 'registro_evidencia', v)} multiline />
-                </td>
-                <td className="px-4 py-2">
-                  <button
-                    onClick={() => setDeleteTarget(article.id)}
-                    className="text-slate-300 hover:text-red-500 transition-colors text-xs"
-                    title="Eliminar artículo"
-                  >
-                    ✕
-                  </button>
+                  )}
                 </td>
               </tr>
             ))}
 
-            {addingNew && (
+            {!locked && addingNew && (
               <tr className="bg-blue-50">
                 <td></td>
                 <td className="px-4 py-2">
@@ -247,10 +302,10 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
                   <input className="w-full border border-blue-300 rounded px-2 py-1 text-xs" placeholder="Frecuencia"
                     value={newRow.frecuencia_evaluacion ?? ''} onChange={e => setNewRow(p => ({ ...p, frecuencia_evaluacion: e.target.value }))} />
                 </td>
-                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.cumple} onChange={v => setNewRow(p => ({ ...p, cumple: v }))} /></td>
-                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.parcial} onChange={v => setNewRow(p => ({ ...p, parcial: v }))} /></td>
-                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.no_cumple} onChange={v => setNewRow(p => ({ ...p, no_cumple: v }))} /></td>
-                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.na} onChange={v => setNewRow(p => ({ ...p, na: v }))} /></td>
+                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.cumple} onChange={() => setNewRowEstado('cumple')} /></td>
+                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.parcial} onChange={() => setNewRowEstado('parcial')} /></td>
+                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.no_cumple} onChange={() => setNewRowEstado('no_cumple')} /></td>
+                <td className="px-4 py-2 text-center"><CheckCell checked={!!newRow.na} onChange={() => setNewRowEstado('na')} /></td>
                 <td className="px-4 py-2">
                   <textarea className="w-full border border-blue-300 rounded px-2 py-1 text-xs resize-none" rows={2} placeholder="Evidencia"
                     value={newRow.registro_evidencia ?? ''} onChange={e => setNewRow(p => ({ ...p, registro_evidencia: e.target.value }))} />
@@ -273,7 +328,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
         </table>
       </div>
 
-      {!addingNew && (
+      {!locked && !addingNew && (
         <div className="px-6 py-3 border-t border-slate-100">
           <button onClick={() => setAddingNew(true)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">
             + Agregar artículo
@@ -284,7 +339,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
   )
 }
 
-function EditableCell({ value, onSave, multiline }: { value: string; onSave: (v: string) => void; multiline?: boolean }) {
+function EditableCell({ value, onSave, multiline, disabled }: { value: string; onSave: (v: string) => void; multiline?: boolean; disabled?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [current, setCurrent] = useState(value)
 
@@ -295,9 +350,9 @@ function EditableCell({ value, onSave, multiline }: { value: string; onSave: (v:
 
   if (!editing) {
     return (
-      <div onClick={() => setEditing(true)}
-        className="cursor-text min-h-[1.5rem] text-slate-700 hover:bg-blue-50 rounded px-1 py-0.5 text-xs"
-        title="Click para editar">
+      <div onClick={() => !disabled && setEditing(true)}
+        className={`min-h-[1.5rem] text-slate-700 rounded px-1 py-0.5 text-xs ${disabled ? 'cursor-default' : 'cursor-text hover:bg-blue-50'}`}
+        title={disabled ? undefined : 'Click para editar'}>
         {value || <span className="text-slate-300 italic">—</span>}
       </div>
     )
