@@ -3,7 +3,7 @@ import Link from 'next/link'
 import LawsFilter from '@/components/LawsFilter'
 import ExpandableCell from '@/components/ExpandableCell'
 import VigenciaStatus from '@/components/VigenciaStatus'
-import { calcularImplementacion, menorFrecuencia } from '@/lib/law-metrics'
+import { calcularImplementacion, colorImplementacion, menorFrecuencia } from '@/lib/law-metrics'
 import type { Law } from '@/lib/types'
 
 const PERIODOS: Record<string, number> = { mensual: 30, bianual: 60, trimestral: 90, semestral: 180, anual: 365 }
@@ -168,8 +168,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                 <td className="px-2 py-2.5">
                   {pct !== null ? (
                     <>
-                      <div className="font-semibold text-slate-700">{pct}%</div>
-                      <div className="text-slate-400">{lawArticles.length} artículo{lawArticles.length !== 1 ? 's' : ''}</div>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${colorImplementacion(pct)}`}>{pct}%</span>
+                      <div className="text-slate-400 mt-0.5">{lawArticles.length} artículo{lawArticles.length !== 1 ? 's' : ''}</div>
                     </>
                   ) : (
                     <span className="text-slate-300">—</span>

@@ -11,6 +11,14 @@ export function calcularImplementacion(articulos: ArticuloCumplimiento[]): numbe
   return Math.round((puntos / aplicables.length) * 100)
 }
 
+export function colorImplementacion(pct: number): string {
+  if (pct === 100) return 'bg-green-100 text-green-800'
+  if (pct >= 75) return 'bg-teal-100 text-teal-800'
+  if (pct >= 50) return 'bg-yellow-100 text-yellow-800'
+  if (pct >= 25) return 'bg-orange-100 text-orange-800'
+  return 'bg-red-100 text-red-800'
+}
+
 const FRECUENCIA_DIAS: [string, number][] = [
   ['diario', 1], ['semanal', 7], ['quincenal', 15], ['mensual', 30],
   ['bimestral', 60], ['bianual', 60], ['trimestral', 90], ['cuatrimestral', 120],
