@@ -207,19 +207,31 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col className="w-8" />
+            <col className="w-[8%]" />
+            <col className="w-[30%]" />
+            <col className="w-[10%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[8%]" />
+            <col className="w-[6%]" />
+            <col className="w-[18%]" />
+            <col className="w-8" />
+          </colgroup>
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-2 py-2.5 w-8"></th>
-              <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Artículo</th>
+              <th className="px-2 py-2.5"></th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Artículo</th>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Ámbito de Aplicación</th>
-              <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Frecuencia</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide w-16">Cumple</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide w-16">Parcial</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide w-20">No Cumple</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide w-12">N/A</th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Frecuencia</th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Cumple</th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Parcial</th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">No Cumple</th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">N/A</th>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Evidencia</th>
-              <th className="px-4 py-2.5 w-8"></th>
+              <th className="px-4 py-2.5"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -351,7 +363,7 @@ function EditableCell({ value, onSave, multiline, disabled }: { value: string; o
   if (!editing) {
     return (
       <div onClick={() => !disabled && setEditing(true)}
-        className={`min-h-[1.5rem] text-slate-700 rounded px-1 py-0.5 text-xs ${disabled ? 'cursor-default' : 'cursor-text hover:bg-blue-50'}`}
+        className={`min-h-[1.5rem] text-slate-700 rounded px-1 py-0.5 text-xs break-words whitespace-pre-wrap ${disabled ? 'cursor-default' : 'cursor-text hover:bg-blue-50'}`}
         title={disabled ? undefined : 'Click para editar'}>
         {value || <span className="text-slate-300 italic">—</span>}
       </div>
