@@ -87,10 +87,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold text-slate-800">Matriz de Identificación y Evaluación</h1>
           <p className="text-sm text-slate-500 mt-0.5">Requisitos Legales</p>
         </div>
-        <Link href="/leyes/nueva"
-          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors">
-          + Nueva Ley
-        </Link>
+        <div className="flex items-center gap-2">
+          <a href="/api/leyes/export"
+            className="border border-slate-300 text-slate-600 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-slate-50 transition-colors">
+            Exportar Excel
+          </a>
+          <Link href="/leyes/nueva"
+            className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-blue-700 transition-colors">
+            + Nueva Ley
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
