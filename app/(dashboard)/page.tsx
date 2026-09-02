@@ -59,7 +59,21 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     if (ps.length === 1) query = query.eq('periodicidad', ps[0])
     else if (ps.length > 1) query = query.in('periodicidad', ps)
   }
-  if (params.q) query = query.or(`codigo.ilike.%${params.q}%,descripcion.ilike.%${params.q}%,titular.ilike.%${params.q}%`)
+  if (params.q) {
+    const { data: matchingArticles } = await supabase
+      .from('articles').select('law_id')
+      .or(`articulo.ilike.%${params.q}%,ambito_aplicacion.ilike.%${params.q}%`)
+    const articleLawIds = [...new Set((matchingArticles ?? []).map((a: { law_id: string }) => a.law_id))]
+
+    const orParts = [
+      `codigo.ilike.%${params.q}%`,
+      `descripcion.ilike.%${params.q}%`,
+      `titular.ilike.%${params.q}%`,
+      `aplicacion.ilike.%${params.q}%`,
+    ]
+    if (articleLawIds.length > 0) orParts.push(`id.in.(${articleLawIds.join(',')})`)
+    query = query.or(orParts.join(','))
+  }
 
   const { data: laws = [] } = await query
   const { data: allLaws = [] } = await supabase.from('laws').select('periodicidad')
