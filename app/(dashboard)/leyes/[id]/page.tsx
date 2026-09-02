@@ -6,7 +6,7 @@ import LawDetailActions from '@/components/LawDetailActions'
 import ArticlesTable from '@/components/ArticlesTable'
 import DocumentSection from '@/components/DocumentSection'
 import AuditPanel from '@/components/AuditPanel'
-import type { Law, Article, AuditLog, LawDocument } from '@/lib/types'
+import type { Law, Article, AuditLog, LawDocument, ArticuloBitacora } from '@/lib/types'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -31,6 +31,11 @@ export default async function LeyDetailPage({ params }: Params) {
     .from('audit_log').select('*').in('registro_id', auditIds)
     .order('created_at', { ascending: false }).limit(50)
   const auditItems = (auditData ?? []) as unknown as AuditLog[]
+
+  const { data: bitacoraData } = articleIds.length > 0
+    ? await supabase.from('articulo_bitacora').select('*').in('article_id', articleIds).order('created_at', { ascending: false })
+    : { data: [] }
+  const bitacora = (bitacoraData ?? []) as unknown as ArticuloBitacora[]
 
   const vigenciaTexto = !law.vigencia_revisada_en
     ? 'Vigencia no verificada'
@@ -110,7 +115,7 @@ export default async function LeyDetailPage({ params }: Params) {
 
       <DocumentSection lawId={id} documents={documents} documentosComentario={law.documentos_comentario ?? null} />
 
-      <ArticlesTable articles={articles} lawId={id} />
+      <ArticlesTable articles={articles} lawId={id} bitacoraInicial={bitacora} />
 
       <AuditPanel items={auditItems} lawCodigo={law.codigo} />
     </div>

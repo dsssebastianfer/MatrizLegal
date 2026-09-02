@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Article } from '@/lib/types'
+import type { Article, ArticuloBitacora } from '@/lib/types'
 import { compareArticulos } from '@/lib/articulo-utils'
 
 interface Props {
   articles: Article[]
   lawId: string
+  bitacoraInicial: ArticuloBitacora[]
 }
 
 type EditableFields = Pick<Article, 'articulo' | 'ambito_aplicacion' | 'frecuencia_evaluacion' | 'cumple' | 'parcial' | 'no_cumple' | 'na' | 'registro_evidencia'>
@@ -50,15 +51,42 @@ function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; on
   )
 }
 
-export default function ArticlesTable({ articles: initial, lawId }: Props) {
+export default function ArticlesTable({ articles: initial, lawId, bitacoraInicial }: Props) {
   const router = useRouter()
   const [articles, setArticles] = useState<Article[]>(initial)
+  const [bitacora, setBitacora] = useState<ArticuloBitacora[]>(bitacoraInicial)
   const [saving, setSaving] = useState<string | null>(null)
   const [addingNew, setAddingNew] = useState(false)
   const [newRow, setNewRow] = useState<Partial<EditableFields>>({})
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [locked, setLocked] = useState(true)
+
+  const bitacoraByArticle = useMemo(() => {
+    const map = new Map<string, ArticuloBitacora[]>()
+    for (const entry of bitacora) {
+      if (!map.has(entry.article_id)) map.set(entry.article_id, [])
+      map.get(entry.article_id)!.push(entry)
+    }
+    return map
+  }, [bitacora])
+
+  async function addBitacoraEntry(articleId: string, comentario: string) {
+    const res = await fetch(`/api/articulos/${articleId}/bitacora`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comentario }),
+    })
+    if (res.ok) {
+      const created = await res.json()
+      setBitacora(prev => [created, ...prev])
+      router.refresh()
+      return true
+    }
+    const d = await res.json().catch(() => ({}))
+    setError(d.error ?? 'Error al guardar la nota')
+    return false
+  }
 
   const sortedArticles = useMemo(() => {
     const hasCustomOrder = articles.some(a => a.orden != null)
@@ -210,14 +238,15 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
         <table className="w-full text-sm table-fixed">
           <colgroup>
             <col className="w-8" />
-            <col className="w-[8%]" />
-            <col className="w-[30%]" />
-            <col className="w-[10%]" />
             <col className="w-[7%]" />
-            <col className="w-[7%]" />
-            <col className="w-[8%]" />
+            <col className="w-[24%]" />
+            <col className="w-[9%]" />
             <col className="w-[6%]" />
-            <col className="w-[18%]" />
+            <col className="w-[6%]" />
+            <col className="w-[7%]" />
+            <col className="w-[5%]" />
+            <col className="w-[12%]" />
+            <col className="w-[16%]" />
             <col className="w-8" />
           </colgroup>
           <thead>
@@ -231,6 +260,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">No Cumple</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">N/A</th>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Evidencia</th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Bitácora</th>
               <th className="px-4 py-2.5"></th>
             </tr>
           </thead>
@@ -286,6 +316,12 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
                   <EditableCell value={article.registro_evidencia ?? ''} onSave={v => updateArticle(article.id, 'registro_evidencia', v)} multiline disabled={locked} />
                 </td>
                 <td className="px-4 py-2">
+                  <BitacoraCell
+                    entries={bitacoraByArticle.get(article.id) ?? []}
+                    onAdd={comentario => addBitacoraEntry(article.id, comentario)}
+                  />
+                </td>
+                <td className="px-4 py-2">
                   {!locked && (
                     <button
                       onClick={() => setDeleteTarget(article.id)}
@@ -322,6 +358,7 @@ export default function ArticlesTable({ articles: initial, lawId }: Props) {
                   <textarea className="w-full border border-blue-300 rounded px-2 py-1 text-xs resize-none" rows={2} placeholder="Evidencia"
                     value={newRow.registro_evidencia ?? ''} onChange={e => setNewRow(p => ({ ...p, registro_evidencia: e.target.value }))} />
                 </td>
+                <td className="px-4 py-2 text-xs text-slate-300 italic">—</td>
                 <td className="px-4 py-2">
                   <div className="flex flex-col gap-1.5">
                     <button onClick={saveNewRow}
@@ -382,5 +419,87 @@ function EditableCell({ value, onSave, multiline, disabled }: { value: string; o
     <input autoFocus
       className="w-full border border-blue-400 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
       value={current} onChange={e => setCurrent(e.target.value)} onBlur={handleBlur} />
+  )
+}
+
+function BitacoraCell({ entries, onAdd }: { entries: ArticuloBitacora[]; onAdd: (comentario: string) => Promise<boolean> }) {
+  const [adding, setAdding] = useState(false)
+  const [text, setText] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+
+  async function handleSave() {
+    if (!text.trim()) { setAdding(false); return }
+    setSaving(true)
+    const ok = await onAdd(text.trim())
+    setSaving(false)
+    if (ok) { setText(''); setAdding(false) }
+  }
+
+  return (
+    <div className="flex items-start gap-1.5">
+      <div className="flex-1 min-w-0">
+        {adding ? (
+          <div className="space-y-1">
+            <textarea autoFocus rows={2} value={text} onChange={e => setText(e.target.value)}
+              placeholder="Escribe una nota..."
+              className="w-full border border-blue-400 rounded px-2 py-1 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-blue-400" />
+            <div className="flex gap-1">
+              <button onClick={handleSave} disabled={saving}
+                className="px-2 py-0.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-60">
+                Guardar
+              </button>
+              <button onClick={() => { setAdding(false); setText('') }}
+                className="px-2 py-0.5 text-xs text-slate-500 border border-slate-300 rounded hover:bg-slate-50">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+            + Agregar nota
+          </button>
+        )}
+      </div>
+      <button onClick={() => setShowHistory(true)}
+        className="shrink-0 flex items-center gap-0.5 text-slate-400 hover:text-blue-600 transition-colors text-xs"
+        title="Ver historial de bitácora">
+        🕐{entries.length > 0 && entries.length}
+      </button>
+      {showHistory && <BitacoraHistoryModal entries={entries} onClose={() => setShowHistory(false)} />}
+    </div>
+  )
+}
+
+function BitacoraHistoryModal({ entries, onClose }: { entries: ArticuloBitacora[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <h3 className="font-semibold text-slate-800">Historial de bitácora</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl leading-none">×</button>
+        </div>
+        <div className="px-6 py-4 overflow-y-auto space-y-3">
+          {entries.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">Sin comentarios registrados.</p>
+          ) : (
+            entries.map(e => (
+              <div key={e.id} className="border border-slate-200 rounded-lg px-3 py-2.5">
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <span className="text-xs font-medium text-slate-600 truncate">
+                    {e.autor_nombre ?? e.autor_email?.split('@')[0] ?? 'Desconocido'}
+                  </span>
+                  <span className="text-xs text-slate-400 shrink-0">{new Date(e.created_at).toLocaleString('es-CL')}</span>
+                </div>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">{e.comentario}</p>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="px-6 py-4 border-t border-slate-100 shrink-0 flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50">Cerrar</button>
+        </div>
+      </div>
+    </div>
   )
 }

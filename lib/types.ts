@@ -44,6 +44,15 @@ export interface Article {
   updated_at: string
 }
 
+export interface ArticuloBitacora {
+  id: string
+  article_id: string
+  comentario: string
+  autor_email: string | null
+  autor_nombre: string | null
+  created_at: string
+}
+
 export interface AuditLog {
   id: string
   tabla: string
